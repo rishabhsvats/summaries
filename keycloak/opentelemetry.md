@@ -157,7 +157,7 @@
 
   Location: quarkus/config-api/src/main/java/org/keycloak/config/TracingOptions.java
 
-  Defines all tracing configuration options using Keycloak's option builder pattern:
+  Defines all tracing configuration options using Keycloaks option builder pattern:
 
   public static final Option<Boolean> TRACING_ENABLED =
       new OptionBuilder<>("tracing-enabled", Boolean.class)
@@ -940,7 +940,7 @@
 
   When adding new tracing:
 
-  1. Use TracingProvider API - Don't directly use OpenTelemetry SDK
+  1. Use TracingProvider API - Dont directly use OpenTelemetry SDK
   2. Prefer automatic lifecycle - Use trace() methods over startSpan()/endSpan()
   3. Follow naming convention - ClassName.operation for span names
   4. Add meaningful attributes - Use OTel Semantic Conventions
