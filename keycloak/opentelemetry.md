@@ -1,4 +1,4 @@
-# Keycloak OpenTelemetry Tracing
+  # Keycloak OpenTelemetry Tracing
 
   Comprehensive distributed tracing implementation for Keycloak using OpenTelemetry.
 
@@ -59,7 +59,6 @@
     --tracing-enabled=true \
     --tracing-endpoint=http://localhost:4317 \
     --tracing-protocol=grpc
-  ```
 
   Verify Tracing is Active
 
@@ -79,31 +78,39 @@
 
   All options are prefixed with tracing-*:
 
-  ┌─────────────────────────────┬─────────┬───────────────────────┬────────────┬──────────────────────────────────────────┐
-  │           Option            │  Type   │        Default        │ Build-time │               Description                │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-enabled             │ Boolean │ false                 │ Yes        │ Enable OpenTelemetry tracing             │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-endpoint            │ String  │ http://localhost:4317 │ No         │ OTLP endpoint for exporting traces       │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-service-name        │ String  │ keycloak              │ No         │ Service name in traces                   │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-protocol            │ String  │ grpc                  │ No         │ Protocol: grpc or http/protobuf          │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-sampler-type        │ String  │ traceidratio          │ Yes        │ Sampler type                             │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-sampler-ratio       │ Double  │ 1.0                   │ No         │ Sampling ratio [0.0, 1.0]                │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-compression         │ Enum    │ none                  │ No         │ Compression: none or gzip                │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-resource-attributes │ List    │ -                     │ No         │ Resource attributes: key1=val1,key2=val2 │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-jdbc-enabled        │ Boolean │ true                  │ Yes        │ Enable JDBC tracing                      │
-  ├─────────────────────────────┼─────────┼───────────────────────┼────────────┼──────────────────────────────────────────┤
-  │ tracing-infinispan-enabled  │ Boolean │ true                  │ No         │ Enable Infinispan cache tracing          │
-  └─────────────────────────────┴─────────┴───────────────────────┴────────────┴──────────────────────────────────────────┘
+  Core Configuration:
 
-  Note: Build-time options require a rebuild when changed. Runtime options can be changed without rebuilding.
+  - tracing-enabled (Boolean, default: false, build-time)
+    - Enable OpenTelemetry tracing
+  - tracing-endpoint (String, default: http://localhost:4317)
+    - OTLP endpoint for exporting traces
+  - tracing-service-name (String, default: keycloak)
+    - Service name in traces
+  - tracing-protocol (String, default: grpc)
+    - Protocol: grpc or http/protobuf
+
+  Sampling Configuration:
+
+  - tracing-sampler-type (String, default: traceidratio, build-time)
+    - Sampler type (see Quarkus docs)
+  - tracing-sampler-ratio (Double, default: 1.0)
+    - Sampling ratio between 0.0 and 1.0
+
+  Advanced Options:
+
+  - tracing-compression (Enum, default: none)
+    - Compression: none or gzip
+  - tracing-resource-attributes (List, default: none)
+    - Resource attributes in format: key1=val1,key2=val2
+
+  Sub-system Tracing:
+
+  - tracing-jdbc-enabled (Boolean, default: true, build-time)
+    - Enable JDBC tracing
+  - tracing-infinispan-enabled (Boolean, default: true)
+    - Enable Infinispan cache tracing
+
+  Note: Build-time options (marked in bold) require a rebuild when changed. Other options can be changed at runtime.
 
   Example Configurations
 
@@ -148,7 +155,7 @@
   - Build-time vs runtime option separation
   - Type-safe configuration with validation
   - Default values optimized for development
-  
+
   ---
   2. Provider SPI Layer
 
@@ -189,7 +196,7 @@
   - Debug logging: Logs span start/end with span names and IDs
   - Validation: Detects unclosed spans (memory leak prevention)
 
-  The provider maintains a stack of scopes to handle nested spans correctly. When a span is started, it's made current in the thread-local context. When ended,
+  The provider maintains a stack of scopes to handle nested spans correctly. When a span is started, its made current in the thread-local context. When ended,
    the scope is closed and the previous context is restored.
 
   3.2 Factory: OTelTracingProviderFactory
@@ -218,7 +225,7 @@
 
   Location: quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/integration/resteasy/KeycloakTracingCustomizer.java
 
-  Automatically creates spans for every JAX-RS resource method invocation by hooking into RESTEasy Reactive's handler chain.
+  Automatically creates spans for every JAX-RS resource method invocation by hooking into RESTEasy Reactives handler chain.
 
   How it works:
 
@@ -256,7 +263,7 @@
   - Propagates trace context via traceparent HTTP header (W3C)
   - Captures HTTP status codes, URLs, methods
   - Used for all Keycloak external communications
-  
+
   4.4 Infinispan Cache Tracing
 
   Location: model/infinispan/src/main/java/org/keycloak/infinispan/module/factory/OpenTelemetryService.java
@@ -265,7 +272,7 @@
   - Cache get, put, remove, clear
   - Cache creation/destruction
   - Cluster-wide cache operations
-
+  
   Configuration: tracing-infinispan-enabled=true (default, runtime)
 
   Span Attributes:
@@ -402,7 +409,7 @@
   MyService.parentOp
   ├── MyService.childOp1
   └── MyService.childOp2
-  
+
   Real-World Example from Codebase
 
   Location: services/src/main/java/org/keycloak/services/DefaultKeycloakContext.java:245
@@ -444,21 +451,27 @@
 
   OpenTelemetry context is propagated across different boundaries:
 
-  ┌──────────────────┬─────────────────────────┬───────────────────────────────┐
-  │     Boundary     │        Mechanism        │            Format             │
-  ├──────────────────┼─────────────────────────┼───────────────────────────────┤
-  │ Incoming HTTP    │ Quarkus auto-extraction │ W3C traceparent header        │
-  ├──────────────────┼─────────────────────────┼───────────────────────────────┤
-  │ Outgoing HTTP    │ OTelHttpClientBuilder   │ W3C traceparent header        │
-  ├──────────────────┼─────────────────────────┼───────────────────────────────┤
-  │ JGroups messages │ OPEN_TELEMETRY protocol │ TracerHeader with W3C context │
-  ├──────────────────┼─────────────────────────┼───────────────────────────────┤
-  │ Thread-local     │ Span.makeCurrent()      │ OpenTelemetry Context API     │
-  ├──────────────────┼─────────────────────────┼───────────────────────────────┤
-  │ Infinispan       │ OpenTelemetryService    │ Parent context inheritance    │
-  └──────────────────┴─────────────────────────┴───────────────────────────────┘
+  Incoming HTTP
+  - Mechanism: Quarkus auto-extraction
+  - Format: W3C traceparent header
 
-  W3C Trace Context Format:
+  Outgoing HTTP
+  - Mechanism: OTelHttpClientBuilder
+  - Format: W3C traceparent header
+
+  JGroups messages
+  - Mechanism: OPEN_TELEMETRY protocol
+  - Format: TracerHeader with W3C context
+
+  Thread-local
+  - Mechanism: Span.makeCurrent()
+  - Format: OpenTelemetry Context API
+
+  Infinispan
+  - Mechanism: OpenTelemetryService
+  - Format: Parent context inheritance
+
+  W3C Trace Context Format
 
   traceparent: 00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01
 
@@ -467,8 +480,8 @@
   - Trace ID: 0af7651916cd43dd8448eb211c80319c (128-bit)
   - Span ID: b7ad6b7169203331 (64-bit)
   - Flags: 01
-
-  Example End-to-End Trace:
+  
+  Example End-to-End Trace
 
   HTTP Request → Keycloak Node 1
     → REST Handler (UserResource.getUser)
@@ -532,8 +545,8 @@
   2. tracing-endpoint points to correct OTLP collector
   3. Firewall allows connection to endpoint
   4. Check logs for export errors
-  5. Verify sampling ratio 
-
+  5. Verify sampling ratio
+  
   Debug with: --log-level=io.opentelemetry:debug
 
   Issue: Memory leak warnings
@@ -554,43 +567,60 @@
 
   Automatic Instrumentation (Zero Code Changes)
 
-  ┌────────────────┬───────────────────────────┬──────────────────────┬────────────┐
-  │   Component    │        Technology         │      Enabled By      │    Type    │
-  ├────────────────┼───────────────────────────┼──────────────────────┼────────────┤
-  │ HTTP Requests  │ Quarkus OpenTelemetry     │ tracing-enabled      │ Build-time │
-  ├────────────────┼───────────────────────────┼──────────────────────┼────────────┤
-  │ REST Endpoints │ KeycloakTracingCustomizer │ tracing-enabled      │ Build-time │
-  ├────────────────┼───────────────────────────┼──────────────────────┼────────────┤
-  │ JDBC Queries   │ opentelemetry-jdbc        │ tracing-jdbc-enabled │ Build-time │
-  ├────────────────┼───────────────────────────┼──────────────────────┼────────────┤
-  │ HTTP Client    │ OTelHttpClientBuilder     │ tracing-enabled      │ Build-time │
-  └────────────────┴───────────────────────────┴──────────────────────┴────────────┘
+  HTTP Requests
+  - Technology: Quarkus OpenTelemetry
+  - Enabled By: tracing-enabled
+  - Type: Build-time
+
+  REST Endpoints
+  - Technology: KeycloakTracingCustomizer
+  - Enabled By: tracing-enabled
+  - Type: Build-time
+
+  JDBC Queries
+  - Technology: opentelemetry-jdbc
+  - Enabled By: tracing-jdbc-enabled
+  - Type: Build-time
+
+  HTTP Client
+  - Technology: OTelHttpClientBuilder
+  - Enabled By: tracing-enabled
+  - Type: Build-time
 
   Manual Instrumentation (Code Required)
 
-  ┌──────────────────┬─────────────────────────┬────────────────────────────┬────────────────────────────┐
-  │    Component     │     Implementation      │         Enabled By         │          Control           │
-  ├──────────────────┼─────────────────────────┼────────────────────────────┼────────────────────────────┤
-  │ Business Logic   │ TracingProvider API     │ tracing-enabled            │ Always traces when enabled │
-  ├──────────────────┼─────────────────────────┼────────────────────────────┼────────────────────────────┤
-  │ Infinispan Cache │ OpenTelemetryService    │ tracing-infinispan-enabled │ Runtime toggle             │
-  ├──────────────────┼─────────────────────────┼────────────────────────────┼────────────────────────────┤
-  │ JGroups Cluster  │ OPEN_TELEMETRY protocol │ JGroups config             │ Protocol-level             │
-  └──────────────────┴─────────────────────────┴────────────────────────────┴────────────────────────────┘
+  Business Logic
+  - Implementation: TracingProvider API
+  - Enabled By: tracing-enabled
+  - Control: Always traces when enabled
+  
+  Infinispan Cache
+  - Implementation: OpenTelemetryService
+  - Enabled By: tracing-infinispan-enabled
+  - Control: Runtime toggle
 
+  JGroups Cluster
+  - Implementation: OPEN_TELEMETRY protocol
+  - Enabled By: JGroups config
+  - Control: Protocol-level
+  
   Trace Propagation
 
-  ┌────────────────────────┬───────────────────────┬───────────────────┐
-  │   Integration Point    │  Propagation Method   │     Standard      │
-  ├────────────────────────┼───────────────────────┼───────────────────┤
-  │ HTTP to Keycloak       │ traceparent header    │ W3C Trace Context │
-  ├────────────────────────┼───────────────────────┼───────────────────┤
-  │ Keycloak to External   │ traceparent header    │ W3C Trace Context │
-  ├────────────────────────┼───────────────────────┼───────────────────┤
-  │ Node to Node (JGroups) │ TracerHeader          │ W3C Trace Context │
-  ├────────────────────────┼───────────────────────┼───────────────────┤
-  │ Thread to Thread       │ Context.makeCurrent() │ OpenTelemetry API │
-  └────────────────────────┴───────────────────────┴───────────────────┘
+  HTTP to Keycloak
+  - Propagation Method: traceparent header
+  - Standard: W3C Trace Context
+
+  Keycloak to External
+  - Propagation Method: traceparent header
+  - Standard: W3C Trace Context
+
+  Node to Node (JGroups)
+  - Propagation Method: TracerHeader
+  - Standard: W3C Trace Context
+  
+  Thread to Thread
+  - Propagation Method: Context.makeCurrent()
+  - Standard: OpenTelemetry API
 
   ---
   Summary
@@ -605,24 +635,29 @@
   - Extensible: Provider SPI allows custom implementations
   - Observable: Debug logging, span validation, integration tests
 
-  Key Files
+  Key Files Reference
 
+  Core SPI Layer:
   server-spi-private/src/main/java/org/keycloak/tracing/
-  ├── TracingProvider.java                    # Core SPI
-  ├── NoopTracingProvider.java                # Fallback implementation
-
+  ├── TracingProvider.java
+  └── NoopTracingProvider.java
+  
+  Quarkus Runtime Implementation:
   quarkus/runtime/src/main/java/org/keycloak/quarkus/runtime/tracing/
-  ├── OTelTracingProvider.java                # Active implementation
-  ├── OTelTracingProviderFactory.java         # Lifecycle management
-  ├── OTelHttpClientBuilder.java              # HTTP client instrumentation
-  └── KeycloakTracingCustomizer.java          # REST auto-instrumentation
+  ├── OTelTracingProvider.java
+  ├── OTelTracingProviderFactory.java
+  ├── OTelHttpClientBuilder.java
+  └── KeycloakTracingCustomizer.java
 
+  Infinispan & JGroups Integration:
   model/infinispan/src/main/java/org/keycloak/
-  ├── infinispan/module/factory/
-  │   └── OpenTelemetryService.java           # Infinispan integration
-  └── jgroups/protocol/
-      └── OPEN_TELEMETRY.java                 # JGroups cluster tracing
-
+  ├── infinispan/module/factory/OpenTelemetryService.java
+  └── jgroups/protocol/OPEN_TELEMETRY.java
+  
+  Configuration:
   quarkus/config-api/src/main/java/org/keycloak/config/
-  └── TracingOptions.java                     # Configuration options
+  └── TracingOptions.java
 
+  Tests:
+  testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/tracing/
+  └── OTelTracingProviderTest.java
