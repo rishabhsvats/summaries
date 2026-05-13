@@ -70,7 +70,8 @@
 
   Start span 'ClassName.methodName' (spanId: '1234567890abcdef')
   End span 'ClassName.methodName' (spanId: '1234567890abcdef')
-
+  ```bash
+  
   ---
   Configuration
 
