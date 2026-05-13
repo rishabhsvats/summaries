@@ -637,7 +637,7 @@
   - Observable: Debug logging, span validation, integration tests
 
   Key Files Reference
-
+  ```
   Core SPI Layer:
   server-spi-private/src/main/java/org/keycloak/tracing/
   ├── TracingProvider.java
@@ -662,3 +662,4 @@
   Tests:
   testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/tracing/
   └── OTelTracingProviderTest.java
+  ```
