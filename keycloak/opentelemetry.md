@@ -59,6 +59,7 @@
     --tracing-enabled=true \
     --tracing-endpoint=http://localhost:4317 \
     --tracing-protocol=grpc
+  ```
 
   Verify Tracing is Active
 
