@@ -439,43 +439,43 @@ Infrastructure compatibility checks (YOU must verify):
 - Storage driver updates?
   - CSI driver changes may need manual intervention
 
-Example: 4.16 → 4.17 upgrade requires new LB health check
-IPI: Installer updates load balancer automatically
-UPI: YOU must update:
+Example: 4.16 → 4.17 upgrade requires new LB health check.
+- IPI: Installer updates load balancer automatically.
+- UPI: You must update it manually.
 
 ```bash
 aws elbv2 modify-target-group \
-
 --target-group-arn arn:aws:elasticloadbalancing:...:targetgroup/api/... \
 --health-check-path /readyz \
 --health-check-port 6443
+```
 
-# Worker node rollout:
-# - If using Machine API: Automatic (like IPI)
-# - If manual management: YOU control rollout timing
-#   - Drain, wait for MCO update, reboot, uncordon
-#   - YOU decide how many workers at a time
+Worker node rollout:
+- If using Machine API: automatic (like IPI).
+- If manual management: you control rollout timing.
+  - Drain, wait for MCO update, reboot, uncordon.
+  - Decide how many workers at a time.
 
-# Control plane rollout:
-# - CVO handles component updates
-# - But if you have custom load balancer setup:
-#   - Monitor LB health checks during master reboots
-#   - May need to adjust LB drain timeouts
+Control plane rollout:
+- CVO handles component updates.
+- With custom load balancer setup:
+  - Monitor LB health checks during master reboots.
+  - Adjust LB drain timeouts if needed.
 
-# Post-upgrade verification (same workload, more infrastructure checks):
+Post-upgrade verification (same workload, more infrastructure checks):
 ```bash
 oc get clusteroperators  # All should be available
 oc get nodes             # All should be ready
 oc get mcp               # Should be updated, not degraded
 ```
 
-# UPI-specific checks:
-# - Verify load balancer health checks passing
-# - Verify custom DNS still resolves
-# - Check custom monitoring for infrastructure health
-# - Review any manual infrastructure changes needed for next upgrade
+UPI-specific checks:
+- Verify load balancer health checks passing.
+- Verify custom DNS still resolves.
+- Check custom monitoring for infrastructure health.
+- Review any manual infrastructure changes needed for next upgrade.
 
-## Key Differences
+**Key Differences**
 
 ```
   ┌───────────────────────┬───────────────────────────────────┬─────────────────────────────────────────────────────────────┐
@@ -497,18 +497,18 @@ oc get mcp               # Should be updated, not degraded
 
 ## 4. Load Balancer Management
 
-### IPI Approach
+**IPI Approach**
 
-# Load balancers are fully managed by cloud provider integrations
+Load balancers are fully managed by cloud provider integrations.
 
-# Day 1: Installer creates:
-# - API load balancer (external)
-# - API load balancer (internal)
-# - Ingress load balancer (for Router)
+Day 1: Installer creates:
+- API load balancer (external)
+- API load balancer (internal)
+- Ingress load balancer (for Router)
 
-# Day 2+: Automatic management
+Day 2+: Automatic management.
 
-# Service type LoadBalancer - Automatic
+Service type `LoadBalancer` (automatic):
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -525,13 +525,13 @@ targetPort: 8080
 EOF
 ```
 
-# What happens automatically:
-# 1. Cloud provider controller detects Service
-# 2. Creates cloud load balancer (ELB/ALB/NLB)
-# 3. Configures target groups/backend pools
-# 4. Adds worker nodes as targets
-# 5. Updates Service with load balancer hostname/IP
-# 6. Automatic health checks configured
+What happens automatically:
+1. Cloud provider controller detects Service.
+2. Creates cloud load balancer (ELB/ALB/NLB).
+3. Configures target groups/backend pools.
+4. Adds worker nodes as targets.
+5. Updates Service with load balancer hostname/IP.
+6. Automatic health checks are configured.
 
 ```bash
 oc get svc my-app
@@ -539,13 +539,14 @@ NAME     TYPE           CLUSTER-IP      EXTERNAL-IP
 my-app   LoadBalancer   172.30.x.x      a1b2c3...elb.amazonaws.com
 ```
 
-# Ingress (Router) changes - Automatic
-# Default Ingress Controller uses installer-created LB
+Ingress (Router) changes (automatic):
+- Default Ingress Controller uses installer-created LB.
+
 ```bash
 oc get ingresscontroller -n openshift-ingress-operator
 ```
 
-# Add new IngressController with separate LB:
+Add new IngressController with separate LB:
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.openshift.io/v1
@@ -562,18 +563,17 @@ scope: Internal  # Cloud provider creates internal LB
 EOF
 ```
 
-# Cloud provider automatically:
-# 1. Creates internal load balancer
-# 2. Configures backend to router pods
-# 3. Updates DNS (if using cloud DNS integration)
+Cloud provider automatically:
+1. Creates internal load balancer.
+2. Configures backend to router pods.
+3. Updates DNS (if using cloud DNS integration).
 
-# Load balancer updates - Automatic
-# - Node added/removed → LB targets updated automatically
-# - Health check changes → Operator updates LB config
-# - Router replicas scaled → LB targets updated
+Load balancer updates (automatic):
+- Node added/removed → LB targets updated automatically.
+- Health check changes → Operator updates LB config.
+- Router replicas scaled → LB targets updated.
 
-# Example: Scale routers
-```
+Example: scale routers
 ```bash
 oc patch ingresscontroller default -n openshift-ingress-operator \
 --type=merge \
