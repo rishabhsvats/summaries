@@ -48,12 +48,12 @@ id: my-cluster-worker-profile  # Installer-created
 **Day 1+ Operations:**
 
 ```bash
-# Scaling - SIMPLE
+# Scaling - Simple
 oc scale machineset my-cluster-worker-us-east-1a --replicas=5
 ```
 
 ```bash
-# Add new MachineSet in different AZ - SIMPLE
+# Add new MachineSet in different AZ - Simple
 cat <<EOF | oc apply -f -
 apiVersion: machine.openshift.io/v1beta1
 kind: MachineSet
@@ -76,18 +76,18 @@ EOF
 ```
 
 ```bash
-# Machine replacement - AUTOMATIC
+# Machine replacement - Automatic
 oc delete machine my-cluster-worker-us-east-1a-xxxxx
 # MachineSet controller creates replacement automatically
 ```
 
-# Change instance type - SIMPLE
+# Change instance type - Simple
 ```bash
 oc patch machineset my-cluster-worker-us-east-1a \
 --type=merge \
 -p '{"spec":{"template":{"spec":{"providerSpec":{"value":{"instanceType":"m5.2xlarge"}}}}}}'
 
-# Autoscaling - NATIVE
+# Autoscaling - native
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: autoscaling.openshift.io/v1
@@ -126,14 +126,14 @@ oc get machinesets -n openshift-machine-api
 # No resources found
 ```
 
-# Machine management is MANUAL
+# Machine management is manual
 
 ## Day 1+ Operations
 
 
 **Option 1: Continue Manual Management (Common for UPI)**
 
-# Scaling - MANUAL
+# Scaling - Manual
 # 1. Provision new VM via your tooling
 ```bash
 terraform apply -var="worker_count=5"
@@ -169,7 +169,7 @@ oc get csr | grep Pending | awk '{print $1}' | xargs oc adm certificate approve
 oc label node <node-name> node-role.kubernetes.io/worker=
 ```
 
-# Machine replacement - MANUAL
+# Machine replacement - Manual
 # 1. Cordon and drain
 ```bash
 oc adm cordon <node-name>
@@ -183,7 +183,7 @@ aws ec2 terminate-instances --instance-ids i-xxxxx
 
 # 3. Provision replacement (same as scaling above)
 
-# Change instance type - MANUAL
+# Change instance type - Manual
 # 1. Drain node
 # 2. Terminate instance
 # 3. Launch new instance with different type
@@ -248,7 +248,7 @@ value: owned  # YOU set cluster ID
 
 ### IPI Approach
 
-# Worker node upgrade - AUTOMATIC
+# Worker node upgrade - Automatic
 # Machine Config Operator handles everything
 ```bash
 oc get mcp
@@ -264,13 +264,13 @@ oc get mcp
 # 4. Node rejoins cluster
 # 5. Repeat for next node
 
-# Control plane upgrade - AUTOMATIC
+# Control plane upgrade - Automatic
 # Cluster Version Operator manages master nodes
 # 1. Etcd operator drains/upgrades masters one by one
 # 2. Static pods are updated
 # 3. Machines reboot if needed
 
-# Machine replacement (worker dies) - AUTOMATIC
+# Machine replacement (worker dies) - Automatic
 # Machine health check detects failure
 ```bash
 oc get machinehealthcheck -n openshift-machine-api
@@ -286,7 +286,7 @@ oc get machinehealthcheck -n openshift-machine-api
 
 ### UPI Approach
 
-# Worker node upgrade - SEMI-AUTOMATIC
+# Worker node upgrade - Semi-automatic
 # MCO creates machine configs, but node lifecycle is different
 
 # If using Machine API (post-configured):
@@ -321,7 +321,7 @@ oc adm uncordon worker-0
 
 # 6. Repeat for next node
 
-# Control plane upgrade - MANUAL COORDINATION
+# Control plane upgrade - Manual COORDINATION
 # Etcd operator still manages etcd upgrade, but:
 # - If static pod update requires reboot, YOU manage timing
 # - YOU ensure one master at a time
@@ -343,7 +343,7 @@ oc adm uncordon $master
 done
 ```
 
-# Machine replacement (worker dies) - FULLY MANUAL
+# Machine replacement (worker dies) - Fully manual
 # 1. Detect failure (monitoring, alerts)
 # 2. Remove node from cluster
 ```bash
@@ -377,7 +377,7 @@ oc get nodes
 
 ### IPI Approach
 
-# Upgrade process - HIGHLY AUTOMATED
+# Upgrade process - Highly automated
 
 # 1. Check available versions
 ```bash
@@ -413,7 +413,7 @@ oc adm upgrade
 
 ### UPI Approach
 
-# Upgrade process - MOSTLY AUTOMATED, but manual coordination
+# Upgrade process - mostly automated, but manual coordination
 
 # 1. Check available versions (same as IPI)
 ```bash
@@ -428,7 +428,7 @@ oc adm upgrade --to=4.17.0
 # CVO handles control plane components (same as IPI)
 # MCO handles machine configs (same as IPI)
 
-# BUT - Manual considerations:
+# Manual considerations:
 
 # Infrastructure compatibility checks (YOU must verify):
 # - Load balancer configuration changes?
@@ -472,7 +472,7 @@ oc get nodes             # All should be ready
 oc get mcp               # Should be updated, not degraded
 ```
 
-# PLUS UPI-specific:
+# UPI-specific checks:
 # - Verify load balancer health checks passing
 # - Verify custom DNS still resolves
 # - Check custom monitoring for infrastructure health
@@ -502,7 +502,7 @@ oc get mcp               # Should be updated, not degraded
 
 ### IPI Approach
 
-# Load balancers are FULLY MANAGED by cloud provider integrations
+# Load balancers are fully managed by cloud provider integrations
 
 # Day 1: Installer creates:
 # - API load balancer (external)
@@ -511,7 +511,7 @@ oc get mcp               # Should be updated, not degraded
 
 # Day 2+: Automatic management
 
-# Service type LoadBalancer - AUTOMATIC
+# Service type LoadBalancer - Automatic
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -542,7 +542,7 @@ oc get svc my-app
 # my-app   LoadBalancer   172.30.x.x      a1b2c3...elb.amazonaws.com
 ```
 
-# Ingress (Router) changes - AUTOMATIC
+# Ingress (Router) changes - Automatic
 # Default Ingress Controller uses installer-created LB
 ```bash
 oc get ingresscontroller -n openshift-ingress-operator
@@ -570,7 +570,7 @@ EOF
 # 2. Configures backend to router pods
 # 3. Updates DNS (if using cloud DNS integration)
 
-# Load balancer updates - AUTOMATIC
+# Load balancer updates - Automatic
 # - Node added/removed → LB targets updated automatically
 # - Health check changes → Operator updates LB config
 # - Router replicas scaled → LB targets updated
@@ -593,7 +593,7 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 ---
 ### UPI Approach
 
-# Load balancers are YOUR RESPONSIBILITY
+# Load balancers are your responsibility
 
 # Day 1: YOU created:
 # - API LB (external): api.cluster.example.com
@@ -608,7 +608,7 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 
 # Day 2+: Manual management
 
-# Service type LoadBalancer - DEPENDS ON CONFIGURATION
+# Service type LoadBalancer - Depends on configuration
 
 # Option 1: Cloud provider integration NOT configured (common UPI)
 ```bash
@@ -698,7 +698,7 @@ aws route53 change-resource-record-sets \
 # Configure cloud provider credentials and infrastructure info
 # Then LoadBalancer services work like IPI (but you configured it)
 
-# Ingress (Router) changes - MANUAL COORDINATION
+# Ingress (Router) changes - Manual COORDINATION
 
 # Add new IngressController:
 ```bash
@@ -721,7 +721,7 @@ EOF
 # 2. Point to worker nodes on router NodePort
 # 3. Update DNS for internal.apps.my-cluster.example.com
 
-# Node added/removed - MANUAL LB UPDATE
+# Node added/removed - Manual LB UPDATE
 # New worker node added:
 # 1. Provision worker (terraform/manual)
 # 2. Approve CSRs
@@ -742,7 +742,7 @@ aws elbv2 deregister-targets \
 --target-group-arn arn:... \
 --targets Id=i-old-worker
 
-# Load balancer health check updates - MANUAL
+# Load balancer health check updates - Manual
 # OpenShift changes health check endpoint? (e.g., upgrade)
 # YOU must update LB config:
 
@@ -754,7 +754,7 @@ aws elbv2 modify-target-group \
 --health-check-path /readyz  # New path
 --health-check-interval-seconds 10
 
-# Control plane node replacement - MANUAL LB UPDATE
+# Control plane node replacement - Manual LB UPDATE
 # Master node replaced:
 # 1. Remove old master from API LB target groups
 ```bash
@@ -800,7 +800,7 @@ aws elbv2 register-targets \
 
 ### IPI Approach
 
-# DNS is FULLY AUTOMATED
+# DNS is fully automated
 
 # Day 1: Installer creates:
 # - Hosted zone (or uses existing)
@@ -810,7 +810,7 @@ aws elbv2 register-targets \
 
 # Day 2+: Automatic DNS updates
 
-# Route (Ingress) creation - AUTOMATIC DNS
+# Route (Ingress) creation - Automatic DNS
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: route.openshift.io/v1
@@ -829,7 +829,7 @@ EOF
 # *.apps.my-cluster.example.com → Ingress LB (created by installer)
 # Router handles host-based routing (no DNS change needed)
 
-# New IngressController domain - AUTOMATIC
+# New IngressController domain - Automatic
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.openshift.io/v1
@@ -849,11 +849,11 @@ EOF
 # 2. Ingress Operator updates DNS (if cloud DNS integration active)
 # 3. *.internal.apps.my-cluster.example.com → Internal LB
 
-# API endpoint changes - AUTOMATIC
+# API endpoint changes - Automatic
 # API LB IP changes? (rare, but possible during maintenance)
 # Cloud provider integration updates DNS record automatically
 
-# Custom domain - REQUIRES DNS DELEGATION (one-time setup)
+# Custom domain - requires DNS delegation (one-time setup)
 # Want custom domain for apps?
 # 1. Configure IngressController with custom domain
 # 2. Delegate DNS to cluster's hosted zone (one-time manual step)
@@ -888,7 +888,7 @@ EOF
 ---
 ### UPI Approach
 
-# DNS is YOUR RESPONSIBILITY
+# DNS is your responsibility
 
 # Day 1: YOU created:
 # - api.cluster.example.com → API LB IP/hostname
@@ -897,7 +897,7 @@ EOF
 
 # Day 2+: Manual DNS management
 
-# Route creation - DNS ALREADY EXISTS (wildcard)
+# Route creation - DNS already exists (wildcard)
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: route.openshift.io/v1
@@ -917,7 +917,7 @@ EOF
 #   → *.apps.cluster.example.com (wildcard you created)
 #   → Ingress LB IP
 
-# New IngressController domain - MANUAL DNS
+# New IngressController domain - Manual DNS
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.openshift.io/v1
@@ -970,7 +970,7 @@ aws route53 change-resource-record-sets \
 }]
 }'
 
-# API endpoint changes - MANUAL DNS UPDATE
+# API endpoint changes - Manual DNS UPDATE
 # API load balancer IP changes?
 # YOU must update DNS:
 
@@ -991,16 +991,16 @@ aws route53 change-resource-record-sets \
 }]
 }'
 
-# Control plane node replacement - DNS UNCHANGED
+# Control plane node replacement - DNS unchanged
 # Load balancer handles routing, DNS points to LB (no change needed)
 # Unless you're using direct DNS to master IPs (bad practice)
 
-# Worker node replacement - DNS COORDINATION
+# Worker node replacement - DNS coordination
 # If using HostNetwork IngressController with DNS to worker IPs:
 # 1. New worker added → Update DNS to include new IP
 # 2. Old worker removed → Update DNS to remove old IP
 
-# Custom domain - MANUAL DELEGATION
+# Custom domain - Manual DELEGATION
 # Same as IPI, but you manage everything:
 # *.apps.my-company.com  CNAME  <your-ingress-lb-hostname>
 # OR
@@ -1024,7 +1024,7 @@ aws route53 change-resource-record-sets \
 
 ### IPI Approach
 
-# Certificates are AUTOMATICALLY MANAGED
+# Certificates are automatically managed
 
 # Day 1: Installer creates:
 # - Root CA
@@ -1034,7 +1034,7 @@ aws route53 change-resource-record-sets \
 
 # Day 2+: Automatic rotation and management
 
-# API server certificate renewal - AUTOMATIC
+# API server certificate renewal - Automatic
 # cluster-kube-apiserver-operator handles renewal
 # Certificates rotate before expiration (typically 30 days before)
 
@@ -1050,7 +1050,7 @@ jq -r '.data."tls.crt"' | base64 -d | openssl x509 -noout -enddate
 # notAfter=Feb 10 12:00:00 2027 GMT
 ```
 
-# Custom API certificates (named certificates) - SIMPLE
+# Custom API certificates (named certificates) - Simple
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -1086,7 +1086,7 @@ EOF
 # 2. Configures SNI routing for api.custom.example.com
 # 3. Handles certificate rotation when you update the secret
 
-# Ingress (Router) certificates - SIMPLE
+# Ingress (Router) certificates - Simple
 # Default: Self-signed cert (*.apps.cluster.example.com)
 
 # Custom certificate:
@@ -1114,7 +1114,7 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 # 2. Serves it for all *.apps routes
 # 3. Reloads when certificate is updated
 
-# Certificate rotation - AUTOMATIC
+# Certificate rotation - Automatic
 # Update secret with new certificate:
 ```bash
 oc create secret tls custom-ingress-cert \
@@ -1127,7 +1127,7 @@ oc create secret tls custom-ingress-cert \
 
 # Router detects change and reloads (no manual intervention)
 
-# Internal certificates - FULLY AUTOMATIC
+# Internal certificates - fully automatic
 # service-ca-operator manages all internal service certificates
 # Automatic rotation, no user action needed
 
@@ -1147,7 +1147,7 @@ oc get secrets -n openshift-kube-apiserver | grep internal
 ---
 ### UPI Approach
 
-# Certificates are AUTOMATICALLY MANAGED (same as IPI)
+# Certificates are automatically managed (same as IPI)
 # But initial generation must account for YOUR infrastructure
 
 # Day 1: Installer creates certificates BUT:
@@ -1181,11 +1181,11 @@ apiServerURL: https://api.my-cluster.example.com:6443
 
 # Day 2+: Same automatic rotation as IPI
 
-# Certificate rotation - AUTOMATIC (same as IPI)
+# Certificate rotation - Automatic (same as IPI)
 # cluster-kube-apiserver-operator handles it
 # No difference from IPI once cluster is running
 
-# Custom API certificates - SAME AS IPI
+# Custom API certificates - same as IPI
 ```bash
 oc create secret tls my-api-cert \
 ```
@@ -1207,7 +1207,7 @@ oc patch apiserver cluster --type=merge -p '{
 }'
 ```
 
-# Ingress certificates - SAME AS IPI
+# Ingress certificates - same as IPI
 ```bash
 oc create secret tls custom-ingress-cert \
 ```
@@ -1254,7 +1254,7 @@ aws elbv2 modify-listener \
 # 3. Ensure backend (kube-apiserver) trusts LB connection
 # (Usually pass-through is simpler for API server)
 
-# Certificate renewal with LB termination - MANUAL COORDINATION
+# Certificate renewal with LB termination - Manual COORDINATION
 # 1. Renew certificate
 # 2. Update Kubernetes secret (automatic pickup)
 # 3. Update load balancer certificate
@@ -1290,7 +1290,7 @@ aws acm import-certificate \
 
 ### IPI Approach
 
-# Dynamic storage provisioning - FULLY FUNCTIONAL
+# Dynamic storage provisioning - Fully functional
 
 # Day 1: Installer configures:
 # - Cloud-specific CSI driver (AWS EBS, Azure Disk, GCP PD)
@@ -1305,7 +1305,7 @@ oc get storageclass
 
 # Day 2+: Automatic volume operations
 
-# Create PVC - AUTOMATIC PROVISIONING
+# Create PVC - Automatic PROVISIONING
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -1340,7 +1340,7 @@ aws ec2 describe-volumes --filters "Name=tag:kubernetes.io/cluster/my-cluster,Va
 # Volume automatically created, tagged, and managed
 ```
 
-# Volume expansion - AUTOMATIC
+# Volume expansion - Automatic
 ```bash
 oc patch pvc my-data -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
 ```
@@ -1350,7 +1350,7 @@ oc patch pvc my-data -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}
 # 2. Calls cloud API to expand volume
 # 3. If filesystem resize needed, triggers it (on pod restart)
 
-# Volume deletion - AUTOMATIC
+# Volume deletion - Automatic
 ```bash
 oc delete pvc my-data
 ```
@@ -1360,7 +1360,7 @@ oc delete pvc my-data
 # 2. Calls cloud API to delete volume (if ReclaimPolicy=Delete)
 # 3. Removes cloud tags
 
-# Snapshot - AUTOMATIC
+# Snapshot - Automatic
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: snapshot.storage.k8s.io/v1
@@ -1379,11 +1379,11 @@ EOF
 # 2. Creates VolumeSnapshotContent
 # 3. Marks VolumeSnapshot as ready
 
-# Cross-AZ volume attachment - AUTOMATIC
+# Cross-AZ volume attachment - Automatic
 # Pod scheduled in different AZ than volume?
 # CSI driver detects and handles (may recreate pod in correct AZ or fail gracefully)
 
-# Storage class customization - SIMPLE
+# Storage class customization - Simple
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: storage.k8s.io/v1
@@ -1415,7 +1415,7 @@ EOF
 ---
 ### UPI Approach
 
-# Dynamic storage provisioning - DEPENDS ON CONFIGURATION
+# Dynamic storage provisioning - Depends on configuration
 
 # Day 1: Installer does NOT configure cloud provider integration
 # (Because infrastructure is pre-provisioned, no cloud credentials given to installer)
@@ -1573,7 +1573,7 @@ volumeName: my-data-pv  # Bind to specific PV
 EOF
 ```
 
-# Volume expansion - MANUAL (without CSI)
+# Volume expansion - Manual (without CSI)
 # 1. Expand cloud volume
 ```bash
 aws ec2 modify-volume --volume-id vol-xxx --size 100
@@ -1599,7 +1599,7 @@ oc patch pv my-data-pv -p '{"spec":{"capacity":{"storage":"100Gi"}}}'
 oc patch pvc my-data -p '{"spec":{"resources":{"requests":{"storage":"100Gi"}}}}'
 ```
 
-# Volume deletion - MANUAL COORDINATION
+# Volume deletion - Manual COORDINATION
 ```bash
 oc delete pvc my-data
 # If ReclaimPolicy=Retain (common for manual PVs)
@@ -1636,7 +1636,7 @@ aws ec2 delete-volume --volume-id vol-xxx
 
 ### IPI Approach
 
-# Cluster monitoring - FULLY CONFIGURED
+# Cluster monitoring - Fully configured
 
 # Day 1: Installer enables:
 # - Prometheus Operator
@@ -1658,7 +1658,7 @@ oc get pods -n openshift-monitoring
 
 # Day 2+: Automatic monitoring
 
-# Infrastructure metrics - AUTOMATIC
+# Infrastructure metrics - Automatic
 # Cloud provider metrics automatically collected
 # - EC2 instance metrics (if using AWS CloudWatch integration)
 # - Node metrics (CPU, memory, disk, network)
@@ -1670,7 +1670,7 @@ oc get route prometheus-k8s -n openshift-monitoring
 # https://prometheus-k8s-openshift-monitoring.apps.cluster.example.com
 ```
 
-# Persistent storage for metrics - SIMPLE
+# Persistent storage for metrics - Simple
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -1696,7 +1696,7 @@ EOF
 # 3. Mounts to Prometheus pods
 # 4. Retains metrics according to retention policy
 
-# Custom ServiceMonitors - WORKS AUTOMATICALLY
+# Custom ServiceMonitors - works automatically
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: monitoring.coreos.com/v1
@@ -1715,7 +1715,7 @@ EOF
 
 # Prometheus automatically discovers and scrapes targets
 
-# Alerting - CONFIGURED
+# Alerting - configured
 # Configure Alertmanager for notifications:
 ```bash
 oc create secret generic alertmanager-main \
@@ -1729,7 +1729,7 @@ oc create secret generic alertmanager-main \
 # 2. Reloads
 # 3. Sends alerts via configured channels (email, Slack, PagerDuty)
 
-# Logging (optional) - SIMPLE TO ENABLE
+# Logging (optional) - Simple TO ENABLE
 # Install cluster logging operator:
 ```bash
 oc apply -f - <<EOF
@@ -1798,7 +1798,7 @@ EOF
 ---
 ### UPI Approach
 
-# Cluster monitoring - SAME CONFIGURATION AS IPI
+# Cluster monitoring - Same configuration as IPI
 # (Monitoring is cluster-internal, not infrastructure-dependent)
 
 # Day 1: Monitoring stack deployed same as IPI
@@ -1809,7 +1809,7 @@ oc get pods -n openshift-monitoring
 
 # Day 2: Same as IPI EXCEPT storage considerations
 
-# Persistent storage for metrics - DEPENDS ON STORAGE SETUP
+# Persistent storage for metrics - depends on storage setup
 
 # If you configured cloud storage (see Storage section):
 ```bash
@@ -1875,7 +1875,7 @@ EOF
 # 3. Configure monitoring to use these PVs
 # (More complex, need to ensure PVC binds to correct PVs)
 
-# Logging with cloud storage - MORE COMPLEX
+# Logging with cloud storage - more complex
 
 # S3 for Loki (UPI):
 # 1. Create S3 bucket manually
@@ -1939,7 +1939,7 @@ size: 200Gi
 EOF
 ```
 
-# Infrastructure monitoring - MANUAL INTEGRATION
+# Infrastructure monitoring - Manual INTEGRATION
 # IPI: Cloud provider integration may provide additional infrastructure metrics
 # UPI: No automatic cloud integration
 
@@ -2004,7 +2004,7 @@ EOF
 
 ### IPI Approach
 
-# Networking - FULLY INTEGRATED WITH CLOUD
+# Networking - Fully integrated with cloud
 
 # Day 1: Installer configures:
 # - VPC with optimal CIDR ranges
@@ -2018,7 +2018,7 @@ EOF
 
 # Day 2+: Network changes
 
-# Add firewall rule (security group) - VIA CLOUD PROVIDER
+# Add firewall rule (security group) - via cloud provider
 # OpenShift doesn't directly manage SGs, but cloud integration respects them
 
 # Example: Expose custom port for NodePort service
@@ -2042,7 +2042,7 @@ EOF
 # IPI: Worker security group already allows ingress on 30000-32767 (NodePort range)
 # Traffic flows automatically
 
-# Egress control - CLOUD NAT GATEWAYS
+# Egress control - cloud NAT gateways
 # Workers in private subnets use NAT Gateways (created by installer)
 # All egress traffic goes through NAT
 
@@ -2076,7 +2076,7 @@ EOF
 # OR use cloud-level egress control (e.g., AWS VPC endpoints, NAT Gateway modifications)
 # IPI: Infrastructure managed by cluster, coordinate with cloud admin
 
-# VPC Peering / VPN - CLOUD CONFIGURATION
+# VPC Peering / VPN - cloud configuration
 # Connect cluster VPC to corporate network:
 
 # AWS example:
@@ -2122,7 +2122,7 @@ aws ec2 authorize-security-group-ingress \
 --port 443 \
 --cidr 192.168.0.0/16
 
-# Ingress controller customization - AUTOMATIC CLOUD LB
+# Ingress controller customization - Automatic CLOUD LB
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: operator.openshift.io/v1
@@ -2155,7 +2155,7 @@ EOF
 # 3. Registers router pods
 # 4. Configures security groups
 
-# Service type LoadBalancer with annotations - AUTOMATIC
+# Service type LoadBalancer with annotations - Automatic
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -2189,7 +2189,7 @@ EOF
 ---
 ### UPI Approach
 
-# Networking - YOU DESIGNED AND CREATED EVERYTHING
+# Networking - you designed and created everything
 
 # Day 1: YOU created:
 # - VPC/Virtual Network (your CIDR choices)
@@ -2201,7 +2201,7 @@ EOF
 
 # Day 2+: Network changes
 
-# Add firewall rule - MANUAL
+# Add firewall rule - Manual
 # Want to expose NodePort 30080?
 
 # YOU update security group:
@@ -2214,7 +2214,7 @@ aws ec2 authorize-security-group-ingress \
 --port 30080 \
 --cidr 0.0.0.0/0
 
-# Egress control - YOUR NAT CONFIGURATION
+# Egress control - your NAT configuration
 # Workers use YOUR NAT Gateway/NAT instance
 
 # Restrict egress at cloud level:
@@ -2232,7 +2232,7 @@ aws ec2 create-route \
 
 # NetworkPolicy works same as IPI (cluster-level, infrastructure-agnostic)
 
-# VPC Peering / VPN - YOUR INFRASTRUCTURE
+# VPC Peering / VPN - your infrastructure
 # Connect to corporate network:
 
 # YOU created the VPC, so peering is straightforward:
@@ -2243,7 +2243,7 @@ aws ec2 create-route \
 # Advantage: Full control over routing
 # No conflict with installer-managed resources
 
-# Ingress controller customization - MANUAL LB OR NODE IPS
+# Ingress controller customization - Manual LB OR NODE IPS
 
 # Option 1: Create separate load balancer manually
 ```bash
@@ -2294,7 +2294,7 @@ aws elbv2 register-targets \
 # Then LoadBalancerService works like IPI
 # (See Machine Management section for cloud provider setup)
 
-# Service type LoadBalancer - NO CLOUD INTEGRATION (default)
+# Service type LoadBalancer - No cloud integration (default)
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: v1
@@ -2318,7 +2318,7 @@ oc get svc my-app
 
 # YOU create load balancer manually (see load balancer section above)
 
-# Network changes coordination - FULL CONTROL
+# Network changes coordination - full control
 # Advantage: You can implement any network topology
 # - Shared services VPC
 # - Hub-and-spoke architecture
@@ -2364,9 +2364,9 @@ oc get svc my-app
 
 ### IPI Approach
 
-# Disaster recovery - RELIES ON CLOUD INTEGRATIONS
+# Disaster recovery - Relies on cloud integrations
 
-# Etcd backup - SAME PROCESS (both IPI and UPI)
+# Etcd backup - Same process (both IPI and UPI)
 # Backup etcd data:
 ```bash
 oc debug node/master-0
@@ -2389,7 +2389,7 @@ oc rsync master-0:/home/core/backup/ ./etcd-backup/
 aws s3 cp ./etcd-backup/ s3://my-cluster-backups/etcd/ --recursive
 ```
 
-# Automated backups - USE CLOUD STORAGE
+# Automated backups - use cloud storage
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: batch/v1
@@ -2438,7 +2438,7 @@ name: aws-creds
 key: aws_secret_access_key
 EOF
 
-# Application backup - VELERO (cloud-native backup)
+# Application backup - Velero (cloud-native backup)
 # Install Velero with cloud provider:
 velero install \
 --provider aws \
@@ -2463,7 +2463,7 @@ velero restore create --from-backup myapp-backup
 # - Creates volumes from snapshots
 # - Restores PVCs
 
-# Infrastructure snapshots - CLOUD PROVIDER
+# Infrastructure snapshots - cloud provider
 # IPI doesn't directly manage infrastructure snapshots, but:
 
 # Take EC2 AMI of master nodes (for quick recovery):
@@ -2492,7 +2492,7 @@ EOF
 
 # Snapshot stored in AWS (EBS snapshot), managed by cloud
 
-# Cross-region DR - USE CLOUD REPLICATION
+# Cross-region DR - use cloud replication
 # Replicate S3 backups to DR region:
 ```bash
 aws s3 sync s3://my-cluster-backups/ s3://my-cluster-backups-dr/ --source-region us-east-1 --region us-west-2
@@ -2511,9 +2511,9 @@ aws ec2 copy-snapshot \
 
 ### UPI Approach
 
-# Disaster recovery - SAME TOOLS, MORE MANUAL COORDINATION
+# Disaster recovery - Same tools, more manual coordination
 
-# Etcd backup - SAME PROCESS AS IPI
+# Etcd backup - same process as IPI
 # (Etcd backup is cluster-internal, infrastructure-agnostic)
 
 ```bash
@@ -2533,7 +2533,7 @@ aws s3 cp ./etcd-backup/ s3://my-cluster-backups/etcd/ --recursive
 # Store on network share:
 scp -r ./etcd-backup/ backup-server:/backups/openshift/cluster/
 
-# Automated backups - MORE COMPLEX (if no cloud integration)
+# Automated backups - more complex (if no cloud integration)
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: batch/v1
@@ -2576,7 +2576,7 @@ cp -r /tmp/backup/* /backup/\$(date +%Y%m%d)/
 EOF
 ```
 
-# Application backup - VELERO (more complex without cloud integration)
+# Application backup - Velero (more complex without cloud integration)
 
 # Option 1: Velero with cloud storage (if you configured cloud provider)
 # Same as IPI
@@ -2610,7 +2610,7 @@ bucket: /backups/velero  # Local path on NFS mount
 EOF
 ```
 
-# Volume snapshots - MORE MANUAL
+# Volume snapshots - more manual
 
 # If you configured CSI driver:
 # Same as IPI (automatic snapshots)
@@ -2627,7 +2627,7 @@ aws ec2 create-snapshot \
 # OR: Use volume-level tools (LVM snapshots, storage array snapshots)
 lvcreate --size 1G --snapshot --name myapp-data-snap /dev/vg0/myapp-data
 
-# Infrastructure snapshots - FULLY MANUAL
+# Infrastructure snapshots - Fully manual
 # Snapshot master nodes:
 ```bash
 aws ec2 create-image \
@@ -2670,7 +2670,7 @@ aws ec2 describe-security-groups --filters "Name=vpc-id,Values=vpc-xxx" > sg-con
 terraform state pull > terraform-state-backup.json
 ```
 
-# Cross-region DR - MORE COORDINATION
+# Cross-region DR - more coordination
 
 # Replicate S3 backups:
 ```bash
