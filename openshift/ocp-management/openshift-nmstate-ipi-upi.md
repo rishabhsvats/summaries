@@ -1110,65 +1110,27 @@ NMState Operator Architecture
 
 How kubernetes-nmstate Works
 
-┌─────────────────────────────────────────────────────────────┐
-│  User creates NodeNetworkConfigurationPolicy                 │
-└─────────────────────────────────────────────────────────────┘
-↓
-┌─────────────────────────────────────────────────────────────┐
-│  NMState Webhook validates policy                            │
-│  - Syntax check                                              │
-│  - Conflict detection                                        │
-└─────────────────────────────────────────────────────────────┘
-↓
-┌─────────────────────────────────────────────────────────────┐
-│  NMState Controller (watches NNCP)                           │
-│  - Selects nodes via nodeSelector                           │
-│  - Creates NodeNetworkConfigurationEnactment per node        │
-└─────────────────────────────────────────────────────────────┘
-↓
-┌─────────────────────────────────────────────────────────────┐
-│  NMState Handler (DaemonSet pod on each node)               │
-│  - Reads NNCE for this node                                 │
-│  - Calls nmstatectl apply with desiredState                 │
-│  - Monitors network changes                                 │
-│  - Reports status back to NNCE                              │
-└─────────────────────────────────────────────────────────────┘
-↓
-┌─────────────────────────────────────────────────────────────┐
-│  Node network interfaces updated                             │
-│  - Bond created, VLANs configured, IPs assigned, etc.       │
-└─────────────────────────────────────────────────────────────┘
-↓
-┌─────────────────────────────────────────────────────────────┐
-│  Status propagated                                           │
-│  - NNCE status: Available/Degraded/Progressing              │
-│  - NNCP status: aggregated from all NNCEs                   │
-└─────────────────────────────────────────────────────────────┘
+| Step | Component | What happens |
+|---|---|---|
+| 1 | User / API | User creates `NodeNetworkConfigurationPolicy` (NNCP). |
+| 2 | NMState Webhook | Validates policy syntax and detects conflicts. |
+| 3 | NMState Controller | Watches NNCP, selects nodes via `nodeSelector`, and creates one `NodeNetworkConfigurationEnactment` (NNCE) per node. |
+| 4 | NMState Handler (DaemonSet) | Runs on each node, reads node NNCE, executes `nmstatectl apply` with `desiredState`, monitors changes, and reports status. |
+| 5 | Node networking | Interfaces are updated (bonds, VLANs, routes, IP config, etc.). |
+| 6 | Status propagation | NNCE reports `Available/Degraded/Progressing`; NNCP aggregates status across targeted nodes. |
 
 ---
 Comparison Summary
 
-┌────────────────────────────────┬───────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────────┬────────────────────────────────┐
-│             Aspect             │                    IPI                    │                                        UPI Bare Metal                                        │           UPI Cloud            │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ NMState needed for basic       │ No                                        │ Yes (often)                                                                                  │ No (usually)                   │
-│ install?                       │                                           │                                                                                              │                                │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ When NMState is useful         │ Multi-NIC, SR-IOV, KubeVirt, custom       │ Bonding, VLANs, complex topology, HA                                                         │ Similar to IPI (advanced       │
-│                                │ routing                                   │                                                                                              │ cases)                         │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ Installation-time config       │ Not supported (cloud-init)                │ Yes (agent-config.yaml)                                                                      │ Not typical                    │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ Post-install operator          │ Optional (for advanced cases)             │ Recommended (declarative mgmt)                                                               │ Optional                       │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ Common use cases               │ - Jumbo frames<br>- SR-IOV<br>- KubeVirt  │ - LACP bonding<br>- VLAN segmentation<br>- Dual-stack<br>- KubeVirt bridges<br>- Edge        │ Same as IPI                    │
-│                                │ bridges                                   │ constrained networking                                                                       │                                │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ Typical complexity             │ Low (simple cloud networking)             │ High (enterprise bare metal)                                                                 │ Low to medium                  │
-├────────────────────────────────┼───────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────────┼────────────────────────────────┤
-│ Managed by                     │ Cloud provider + NMState (optional)       │ NMState (essential)                                                                          │ Cloud provider + NMState       │
-│                                │                                           │                                                                                              │ (optional)                     │
-└────────────────────────────────┴───────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────────┴────────────────────────────────┘
+| Aspect | IPI | UPI Bare Metal | UPI Cloud |
+|---|---|---|---|
+| NMState needed for basic install? | No | Yes (often) | No (usually) |
+| When NMState is useful | Multi-NIC, SR-IOV, KubeVirt, custom routing | Bonding, VLANs, complex topology, HA | Similar to IPI (advanced cases) |
+| Installation-time config | Not supported (cloud-init path) | Yes (`agent-config.yaml`) | Not typical |
+| Post-install operator | Optional (advanced cases) | Recommended (declarative management) | Optional |
+| Common use cases | Jumbo frames, SR-IOV, KubeVirt bridges | LACP bonding, VLAN segmentation, dual-stack, KubeVirt bridges, edge-constrained networking | Same as IPI |
+| Typical complexity | Low (simple cloud networking) | High (enterprise bare metal) | Low to medium |
+| Managed by | Cloud provider + NMState (optional) | NMState (essential) | Cloud provider + NMState (optional) |
 
 ---
 Key Takeaways
