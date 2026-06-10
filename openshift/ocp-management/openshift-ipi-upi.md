@@ -86,6 +86,7 @@ oc delete machine my-cluster-worker-us-east-1a-xxxxx
 oc patch machineset my-cluster-worker-us-east-1a \
 --type=merge \
 -p '{"spec":{"template":{"spec":{"providerSpec":{"value":{"instanceType":"m5.2xlarge"}}}}}}'
+```
 
 # Autoscaling - native
 ```bash
@@ -104,8 +105,6 @@ kind: MachineSet
 name: my-cluster-worker-us-east-1a
 ```
 
-
-**What IPI Provides:**
 
 ## What IPI Provides
 - ✅ MachineSets pre-configured with all cloud details
@@ -142,14 +141,13 @@ terraform apply -var="worker_count=5"
 # OR manually
 ```bash
 aws ec2 run-instances \
-```
-
 --image-id ami-rhcos-xxx \
 --instance-type m5.xlarge \
 --subnet-id subnet-your-custom-subnet \
 --security-group-ids sg-your-custom-sg \
 --iam-instance-profile Name=your-custom-worker-profile \
 --user-data file://worker.ign
+```
 
 # 2. Wait for node to join
 ```bash
@@ -447,7 +445,6 @@ oc adm upgrade --to=4.17.0
 
 ```bash
 aws elbv2 modify-target-group \
-```
 
 --target-group-arn arn:aws:elasticloadbalancing:...:targetgroup/api/... \
 --health-check-path /readyz \
@@ -576,11 +573,13 @@ EOF
 # - Router replicas scaled → LB targets updated
 
 # Example: Scale routers
+```
 ```bash
 oc patch ingresscontroller default -n openshift-ingress-operator \
 --type=merge \
 -p '{"spec":{"replicas":5}}'
 # Cloud provider LB automatically adds new router pods as targets
+```
 
 ## What IPI Manages
 - ✅ Load balancer creation
@@ -636,45 +635,39 @@ oc get svc my-app
 # 1. Create load balancer
 ```bash
 aws elbv2 create-load-balancer \
-```
-
 --name my-app-lb \
 --subnets subnet-xxx subnet-yyy \
 --security-groups sg-xxx
+```
 
 # 2. Create target group
 ```bash
 aws elbv2 create-target-group \
-```
-
 --name my-app-targets \
 --protocol TCP \
 --port 8080 \
 --vpc-id vpc-xxx
+```
 
 # 3. Register worker nodes
 ```bash
 aws elbv2 register-targets \
-```
-
 --target-group-arn arn:... \
 --targets Id=i-worker-0 Id=i-worker-1 Id=i-worker-2
+```
 
 # 4. Create listener
 ```bash
 aws elbv2 create-listener \
-```
-
 --load-balancer-arn arn:... \
 --protocol TCP \
 --port 80 \
 --default-actions Type=forward,TargetGroupArn=arn:...
+```
 
 # 5. Update DNS
 ```bash
 aws route53 change-resource-record-sets \
-```
-
 --hosted-zone-id Z123 \
 --change-batch '{
 "Changes": [{
@@ -690,6 +683,7 @@ aws route53 change-resource-record-sets \
 }
 }]
 }'
+```
 
 # 6. Manually update Service (can't be type LoadBalancer without cloud integration)
 # Change to NodePort or ExternalName instead
@@ -729,18 +723,16 @@ EOF
 
 ```bash
 aws elbv2 register-targets \
-```
-
 --target-group-arn arn:...:targetgroup/ingress/... \
 --targets Id=i-new-worker
+```
 
 # Node removed:
 ```bash
 aws elbv2 deregister-targets \
-```
-
 --target-group-arn arn:... \
 --targets Id=i-old-worker
+```
 
 # Load balancer health check updates - Manual
 # OpenShift changes health check endpoint? (e.g., upgrade)
@@ -748,43 +740,38 @@ aws elbv2 deregister-targets \
 
 ```bash
 aws elbv2 modify-target-group \
-```
-
 --target-group-arn arn:... \
 --health-check-path /readyz  # New path
 --health-check-interval-seconds 10
+```
 
 # Control plane node replacement - Manual LB UPDATE
 # Master node replaced:
 # 1. Remove old master from API LB target groups
 ```bash
 aws elbv2 deregister-targets \
-```
-
 --target-group-arn arn:...:targetgroup/api/... \
 --targets Id=i-old-master
+```
 
 ```bash
 aws elbv2 deregister-targets \
-```
-
 --target-group-arn arn:...:targetgroup/api-internal/... \
 --targets Id=i-old-master
+```
 
 # 2. Add new master to API LB target groups
 ```bash
 aws elbv2 register-targets \
-```
-
 --target-group-arn arn:...:targetgroup/api/... \
 --targets Id=i-new-master
+```
 
 ```bash
 aws elbv2 register-targets \
-```
-
 --target-group-arn arn:...:targetgroup/api-internal/... \
 --targets Id=i-new-master
+```
 
 ## What UPI Requires
 - ❌ Manual load balancer creation for new services
@@ -952,8 +939,6 @@ oc get pods -n openshift-ingress -o wide
 # AWS Route53 example:
 ```bash
 aws route53 change-resource-record-sets \
-```
-
 --hosted-zone-id Z123 \
 --change-batch '{
 "Changes": [{
@@ -969,6 +954,7 @@ aws route53 change-resource-record-sets \
 }
 }]
 }'
+```
 
 # API endpoint changes - Manual DNS UPDATE
 # API load balancer IP changes?
@@ -976,8 +962,6 @@ aws route53 change-resource-record-sets \
 
 ```bash
 aws route53 change-resource-record-sets \
-```
-
 --hosted-zone-id Z123 \
 --change-batch '{
 "Changes": [{
@@ -990,6 +974,7 @@ aws route53 change-resource-record-sets \
 }
 }]
 }'
+```
 
 # Control plane node replacement - DNS unchanged
 # Load balancer handles routing, DNS points to LB (no change needed)
@@ -1092,11 +1077,10 @@ EOF
 # Custom certificate:
 ```bash
 oc create secret tls custom-ingress-cert \
-```
-
 --cert=apps-cert.pem \
 --key=apps-key.pem \
 -n openshift-ingress
+```
 
 ```bash
 oc patch ingresscontroller default -n openshift-ingress-operator \
@@ -1108,6 +1092,7 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 }
 }
 }'
+```
 
 # Router automatically:
 # 1. Picks up new certificate
@@ -1118,12 +1103,11 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 # Update secret with new certificate:
 ```bash
 oc create secret tls custom-ingress-cert \
-```
-
 --cert=apps-cert-new.pem \
 --key=apps-key-new.pem \
 -n openshift-ingress \
 --dry-run=client -o yaml | oc replace -f -
+```
 
 # Router detects change and reloads (no manual intervention)
 
@@ -1188,11 +1172,10 @@ apiServerURL: https://api.my-cluster.example.com:6443
 # Custom API certificates - same as IPI
 ```bash
 oc create secret tls my-api-cert \
-```
-
 --cert=cert.pem \
 --key=key.pem \
 -n openshift-config
+```
 
 ```bash
 oc patch apiserver cluster --type=merge -p '{
@@ -1210,11 +1193,10 @@ oc patch apiserver cluster --type=merge -p '{
 # Ingress certificates - same as IPI
 ```bash
 oc create secret tls custom-ingress-cert \
-```
-
 --cert=apps-cert.pem \
 --key=apps-key.pem \
 -n openshift-ingress
+```
 
 ```bash
 oc patch ingresscontroller default -n openshift-ingress-operator \
@@ -1225,6 +1207,7 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 }
 }
 }'
+```
 
 # Key difference: Load balancer coordination
 
@@ -1237,19 +1220,17 @@ oc patch ingresscontroller default -n openshift-ingress-operator \
 # 1. Upload certificate to AWS
 ```bash
 aws acm import-certificate \
-```
-
 --certificate fileb://api-cert.pem \
 --private-key fileb://api-key.pem \
 --certificate-chain fileb://ca-chain.pem
+```
 
 # 2. Configure ALB listener with certificate
 ```bash
 aws elbv2 modify-listener \
-```
-
 --listener-arn arn:... \
 --certificates CertificateArn=arn:aws:acm:...
+```
 
 # 3. Ensure backend (kube-apiserver) trusts LB connection
 # (Usually pass-through is simpler for API server)
@@ -1260,11 +1241,10 @@ aws elbv2 modify-listener \
 # 3. Update load balancer certificate
 ```bash
 aws acm import-certificate \
-```
-
 --certificate-arn arn:... \
 --certificate fileb://api-cert-new.pem \
 --private-key fileb://api-key-new.pem
+```
 
 ## UPI Specific Considerations
 
@@ -1471,10 +1451,9 @@ oc patch infrastructure cluster --type=merge -p '{
 # Tag your VPC, subnets, security groups:
 ```bash
 aws ec2 create-tags \
-```
-
 --resources vpc-xxx subnet-xxx subnet-yyy sg-xxx \
 --tags Key=kubernetes.io/cluster/my-upi-cluster,Value=owned
+```
 
 # Step 5: Create StorageClass
 ```bash
@@ -1512,11 +1491,11 @@ EOF
 
 # Option 2: Use external provisioner (if no cloud integration)
 
-# Example: NFS provisioner for on-prem UPI
-# 1. Deploy NFS provisioner
+```bash
 helm install nfs-provisioner stable/nfs-client-provisioner \
 --set nfs.server=nfs-server.example.com \
 --set nfs.path=/exports/kubernetes
+```
 
 # 2. StorageClass created automatically by provisioner
 ```bash
@@ -1530,12 +1509,11 @@ oc get storageclass
 # Create volume manually (cloud or on-prem):
 ```bash
 aws ec2 create-volume \
-```
-
 --availability-zone us-east-1a \
 --size 50 \
 --volume-type gp3 \
 --tag-specifications 'ResourceType=volume,Tags=[{Key=Name,Value=my-data}]'
+```
 
 # Create PV manually:
 ```bash
@@ -1719,10 +1697,9 @@ EOF
 # Configure Alertmanager for notifications:
 ```bash
 oc create secret generic alertmanager-main \
-```
-
 --from-file=alertmanager.yaml=alertmanager-config.yaml \
 -n openshift-monitoring
+```
 
 # Alertmanager automatically:
 # 1. Picks up new config
@@ -1886,8 +1863,6 @@ aws s3 mb s3://my-cluster-logging
 # 2. Create IAM policy for Loki access
 ```bash
 aws iam create-policy \
-```
-
 --policy-name LokiS3Access \
 --policy-document '{
 "Version": "2012-10-17",
@@ -1900,6 +1875,7 @@ aws iam create-policy \
 ]
 }]
 }'
+```
 
 # 3. Create IAM role for Loki pods
 # (Complex: requires IRSA or static credentials)
@@ -1907,14 +1883,13 @@ aws iam create-policy \
 # 4. Create secret with S3 credentials
 ```bash
 oc create secret generic logging-loki-s3 \
-```
-
 -n openshift-logging \
 --from-literal=bucketnames=my-cluster-logging \
 --from-literal=endpoint=https://s3.us-east-1.amazonaws.com \
 --from-literal=region=us-east-1 \
 --from-literal=access_key_id=AKIA... \
 --from-literal=access_key_secret=...
+```
 
 # 5. Configure LokiStack (same as IPI)
 # Now it works
@@ -2083,10 +2058,9 @@ EOF
 # 1. Create VPC peering connection
 ```bash
 aws ec2 create-vpc-peering-connection \
-```
-
 --vpc-id vpc-cluster \
 --peer-vpc-id vpc-corporate
+```
 
 # 2. Accept peering
 ```bash
@@ -2103,11 +2077,10 @@ aws ec2 describe-route-tables --filters "Name=vpc-id,Values=vpc-cluster"
 # Add routes to corporate CIDR:
 ```bash
 aws ec2 create-route \
-```
-
 --route-table-id rtb-cluster-private-1a \
 --destination-cidr-block 192.168.0.0/16 \
 --vpc-peering-connection-id pcx-xxx
+```
 
 # Repeat for all AZ route tables
 
@@ -2115,12 +2088,11 @@ aws ec2 create-route \
 # Allow traffic from corporate CIDR:
 ```bash
 aws ec2 authorize-security-group-ingress \
-```
-
 --group-id sg-cluster-workers \
 --protocol tcp \
 --port 443 \
 --cidr 192.168.0.0/16
+```
 
 # Ingress controller customization - Automatic CLOUD LB
 ```bash
@@ -2207,12 +2179,11 @@ EOF
 # YOU update security group:
 ```bash
 aws ec2 authorize-security-group-ingress \
-```
-
 --group-id sg-your-workers \
 --protocol tcp \
 --port 30080 \
 --cidr 0.0.0.0/0
+```
 
 # Egress control - your NAT configuration
 # Workers use YOUR NAT Gateway/NAT instance
@@ -2224,11 +2195,10 @@ aws ec2 authorize-security-group-ingress \
 
 ```bash
 aws ec2 create-route \
-```
-
 --route-table-id rtb-your-private \
 --destination-cidr-block 52.0.0.0/8 \  # AWS service ranges only
 --nat-gateway-id nat-xxx
+```
 
 # NetworkPolicy works same as IPI (cluster-level, infrastructure-agnostic)
 
@@ -2264,31 +2234,28 @@ EOF
 # YOU create load balancer:
 ```bash
 aws elbv2 create-load-balancer \
-```
-
 --name internal-ingress-lb \
 --type network \
 --scheme internal \
 --subnets subnet-your-private-1a subnet-your-private-1b
+```
 
 # YOU create target group pointing to worker node IPs (HostNetwork mode)
 ```bash
 aws elbv2 create-target-group \
-```
-
 --name internal-ingress-tg \
 --protocol TCP \
 --port 443 \
 --vpc-id vpc-your-vpc \
 --target-type ip  # HostNetwork uses node IPs
+```
 
 # Register worker node IPs:
 ```bash
 aws elbv2 register-targets \
-```
-
 --target-group-arn arn:... \
 --targets Id=10.0.1.50 Id=10.0.1.51 Id=10.0.1.52
+```
 
 # Option 2: Configure cloud provider integration (post-install)
 # Then LoadBalancerService works like IPI
@@ -2412,20 +2379,15 @@ containers:
 image: quay.io/openshift/origin-cli:latest
 command:
 - /bin/bash
-```
-
 - -c
 - |
-```bash
-oc debug node/\${MASTER_NODE} -- /bin/bash -c '
-chroot /host /usr/local/bin/cluster-backup.sh /tmp/backup
-aws s3 cp /tmp/backup/ s3://my-cluster-backups/etcd/\$(date +%Y%m%d)/ --recursive
-'
+  oc debug node/${MASTER_NODE} -- /bin/bash -c '
+  chroot /host /usr/local/bin/cluster-backup.sh /tmp/backup
+  aws s3 cp /tmp/backup/ s3://my-cluster-backups/etcd/$(date +%Y%m%d)/ --recursive
+  '
 env:
 - name: MASTER_NODE
 value: master-0
-```
-
 - name: AWS_ACCESS_KEY_ID
 valueFrom:
 secretKeyRef:
@@ -2437,15 +2399,16 @@ secretKeyRef:
 name: aws-creds
 key: aws_secret_access_key
 EOF
+```
 
-# Application backup - Velero (cloud-native backup)
-# Install Velero with cloud provider:
+```bash
 velero install \
 --provider aws \
 --plugins velero/velero-plugin-for-aws:v1.9.0 \
 --bucket my-cluster-velero-backups \
 --secret-file ./credentials-velero \
 --backup-location-config region=us-east-1
+```
 
 # Backup namespace:
 velero backup create myapp-backup --include-namespaces myapp
@@ -2469,11 +2432,10 @@ velero restore create --from-backup myapp-backup
 # Take EC2 AMI of master nodes (for quick recovery):
 ```bash
 aws ec2 create-image \
-```
-
 --instance-id i-master-0 \
 --name "cluster-master-backup-$(date +%Y%m%d)" \
 --description "Master node backup"
+```
 
 # Volume snapshots (automated via cloud):
 # CSI driver can create snapshots:
@@ -2501,11 +2463,10 @@ aws s3 sync s3://my-cluster-backups/ s3://my-cluster-backups-dr/ --source-region
 # Replicate EBS snapshots to DR region:
 ```bash
 aws ec2 copy-snapshot \
-```
-
 --source-region us-east-1 \
 --source-snapshot-id snap-xxx \
 --destination-region us-west-2
+```
 
 ---
 
@@ -2564,15 +2525,12 @@ volumeMounts:
 mountPath: /backup
 command:
 - /bin/bash
-```
-
 - -c
 - |
-```bash
-oc debug node/\${MASTER_NODE} -- /bin/bash -c '
-chroot /host /usr/local/bin/cluster-backup.sh /tmp/backup
-cp -r /tmp/backup/* /backup/\$(date +%Y%m%d)/
-'
+  oc debug node/${MASTER_NODE} -- /bin/bash -c '
+  chroot /host /usr/local/bin/cluster-backup.sh /tmp/backup
+  cp -r /tmp/backup/* /backup/$(date +%Y%m%d)/
+  '
 EOF
 ```
 
@@ -2580,8 +2538,7 @@ EOF
 
 # Option 1: Velero with cloud storage (if you configured cloud provider)
 # Same as IPI
-
-# Option 2: Velero with S3-compatible storage (MinIO, Ceph)
+```bash
 velero install \
 --provider aws \  # Use AWS provider with S3-compatible endpoint
 --plugins velero/velero-plugin-for-aws:v1.9.0 \
@@ -2589,12 +2546,14 @@ velero install \
 --secret-file ./credentials-velero \
 --backup-location-config \
 region=minio,s3ForcePathStyle="true",s3Url=http://minio.example.com:9000
+```
 
-# Option 3: Velero with filesystem backup (no object storage)
+```bash
 velero install \
 --provider restic \
 --use-node-agent \
 --no-default-backup-location
+```
 
 # Configure restic to backup to NFS:
 ```bash
@@ -2619,10 +2578,9 @@ EOF
 # Take cloud snapshots manually:
 ```bash
 aws ec2 create-snapshot \
-```
-
 --volume-id vol-myapp-data \
 --description "myapp data backup $(date +%Y%m%d)"
+```
 
 # OR: Use volume-level tools (LVM snapshots, storage array snapshots)
 lvcreate --size 1G --snapshot --name myapp-data-snap /dev/vg0/myapp-data
@@ -2631,20 +2589,16 @@ lvcreate --size 1G --snapshot --name myapp-data-snap /dev/vg0/myapp-data
 # Snapshot master nodes:
 ```bash
 aws ec2 create-image \
-```
-
 --instance-id i-your-master-0 \
 --name "master-0-backup-$(date +%Y%m%d)"
+```
 
 # Snapshot worker nodes:
-```
+```bash
 for worker in i-worker-0 i-worker-1 i-worker-2; do
 aws ec2 create-image \
-```
-
 --instance-id $worker \
 --name "${worker}-backup-$(date +%Y%m%d)"
-```
 done
 ```
 
@@ -2675,28 +2629,21 @@ terraform state pull > terraform-state-backup.json
 # Replicate S3 backups:
 ```bash
 aws s3 sync s3://my-cluster-backups/ s3://my-cluster-backups-dr/ \
-```
-
 --source-region us-east-1 --region us-west-2
+```
 
 # Replicate EBS snapshots:
 # List all cluster volumes:
 ```bash
 aws ec2 describe-volumes \
-```
-
 --filters "Name=tag:kubernetes.io/cluster/my-cluster,Values=owned" \
 --query 'Volumes[*].VolumeId' --output text | \
-```
 while read vol; do
 snap_id=$(aws ec2 create-snapshot --volume-id $vol --query 'SnapshotId' --output text)
 aws ec2 copy-snapshot \
-```
-
 --source-region us-east-1 \
 --source-snapshot-id $snap_id \
 --destination-region us-west-2
-```
 done
 ```
 
@@ -2744,7 +2691,7 @@ terraform apply -var="region=us-west-2"
 ```
 
 ---
-Summary Table: IPI vs UPI Day 1+ Operations
+## Summary Table: IPI vs UPI Day 1+ Operations
 
 ```
   ┌────────────────────────────┬────────────────────────────────────┬────────────────────────────────────────────┬──────────────────────────────────────────┐
@@ -2781,7 +2728,7 @@ Summary Table: IPI vs UPI Day 1+ Operations
 ```
 
 ---
-Conclusion
+## Conclusion
 
 ## IPI Day 1+
 - Strengths: Automation, simplicity, cloud-native integrations work out of the box
