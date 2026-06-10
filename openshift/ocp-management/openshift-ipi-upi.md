@@ -371,7 +371,7 @@ oc get nodes
 ```
 
 ---
-3. Cluster Version Upgrades
+## 3. Cluster Version Upgrades
 
 **IPI Approach**
 

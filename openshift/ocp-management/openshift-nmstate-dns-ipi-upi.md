@@ -1,4 +1,14 @@
-DNS in NMState Context
+# DNS in NMState Context
+
+## Quick Navigation
+- [DNS in IPI](#dns-in-ipi)
+- [DNS in UPI](#dns-in-upi)
+- [NMState DNS Role in UPI: Node Resolver Configuration](#nmstate-dns-role-in-upi-node-resolver-configuration)
+- [DNS Troubleshooting](#dns-troubleshooting)
+- [Common DNS Issues](#common-dns-issues)
+- [DNS vs CoreDNS (Cluster DNS)](#dns-vs-coredns-cluster-dns)
+- [Summary: DNS in IPI vs UPI](#summary-dns-in-ipi-vs-upi)
+- [Key Takeaways](#key-takeaways)
 
 **Two Levels of DNS Configuration**
 
@@ -55,7 +65,7 @@ nameserver 192.168.1.54
 nameserver 2001:db8::53
 
 ---
-DNS in IPI
+## DNS in IPI
 
 **Default IPI DNS Behavior**
 
@@ -251,7 +261,7 @@ Different teams get different search domains
 team-b nodes: database.team-b.example.com first
 
 ---
-DNS in UPI
+## DNS in UPI
 
 **UPI DNS Configuration Requirements**
 
@@ -291,7 +301,7 @@ etcd-2.cluster.example.com      A     192.168.1.12  # master-2
 These DNS records are NOT managed by NMState - they're external infrastructure.
 
 ---
-NMState DNS Role in UPI: Node Resolver Configuration
+## NMState DNS Role in UPI: Node Resolver Configuration
 
 UPI Bare Metal: Installation-Time DNS via NMState
 
@@ -597,7 +607,7 @@ spec:
 
 ---
 ```
-DNS Troubleshooting
+## DNS Troubleshooting
 
 **Check Node DNS Configuration**
 
@@ -660,7 +670,7 @@ oc get nnce worker-0-production-dns -o yaml
 ```
 
 ---
-Common DNS Issues
+## Common DNS Issues
 
 Issue 1: Node cannot resolve `api.cluster.example.com`
 
@@ -854,7 +864,7 @@ spec:
 ```
 
 ---
-DNS vs CoreDNS (Cluster DNS)
+## DNS vs CoreDNS (Cluster DNS)
 
 Critical distinction:
 
@@ -892,7 +902,7 @@ nslookup api.cluster.example.com
 Flow: Node process -> node DNS from `/etc/resolv.conf`.
 
 ---
-Summary: DNS in IPI vs UPI
+## Summary: DNS in IPI vs UPI
 
 ```text
 Aspect                     | IPI                             | UPI Bare Metal                    | UPI Cloud
@@ -907,7 +917,7 @@ Cluster DNS (CoreDNS)      | Same                            | Same             
 ```
 
 ---
-Key Takeaways
+## Key Takeaways
 
 Node DNS (NMState):
 - IPI: Cloud provides DNS automatically; NMState is usually for overrides.

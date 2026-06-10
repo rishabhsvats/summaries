@@ -1,4 +1,12 @@
 # NMState in IPI vs UPI: Complete Guide
+
+## Quick Navigation
+- [NMState in IPI](#nmstate-in-ipi)
+- [NMState in UPI](#nmstate-in-upi)
+- [NMState Operator Architecture](#nmstate-operator-architecture)
+- [Comparison Summary](#comparison-summary)
+- [Key Takeaways](#key-takeaways)
+
 **What is NMState?**
 
 NMState is a declarative network state management tool for Linux host networking. In OpenShift/Kubernetes, the kubernetes-nmstate operator allows you to configure host network interfaces declaratively using
@@ -59,7 +67,7 @@ address:
 Scope: Host-level networking only (node network interfaces)
 
 ---
-NMState in IPI
+## NMState in IPI
 
 Role: Minimal to Optional
 
@@ -320,7 +328,7 @@ oc get pods -n openshift-nmstate
 4. Create NodeNetworkConfigurationPolicy (see examples above)
 
 ---
-NMState in UPI
+## NMState in UPI
 
 Role: Important to Critical (Especially Bare Metal)
 
@@ -1106,7 +1114,7 @@ networkName: vm-network
 UPI Role: NMState critical for VM networking isolation
 
 ---
-NMState Operator Architecture
+## NMState Operator Architecture
 
 How kubernetes-nmstate Works
 
@@ -1120,7 +1128,7 @@ How kubernetes-nmstate Works
 | 6 | Status propagation | NNCE reports `Available/Degraded/Progressing`; NNCP aggregates status across targeted nodes. |
 
 ---
-Comparison Summary
+## Comparison Summary
 
 | Aspect | IPI | UPI Bare Metal | UPI Cloud |
 |---|---|---|---|
@@ -1133,7 +1141,7 @@ Comparison Summary
 | Managed by | Cloud provider + NMState (optional) | NMState (essential) | Cloud provider + NMState (optional) |
 
 ---
-Key Takeaways
+## Key Takeaways
 
 IPI
 
