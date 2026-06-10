@@ -511,88 +511,84 @@ ntp.internal                  → 10.0.100.100
 ---
 UPI Traditional (PXE/Manual): DNS in Ignition
 
-# worker.ign snippet
-# Alternative to agent-config.yaml for traditional UPI
+`worker.ign` snippet (traditional UPI alternative to `agent-config.yaml`):
 
-```
+```yaml
 variant: fcos
 version: 1.4.0
 storage:
-files:
-- path: /etc/NetworkManager/conf.d/99-custom-dns.conf
-  mode: 0644
-contents:
-inline: |
-[main]
-dns=none
+  files:
+    - path: /etc/NetworkManager/conf.d/99-custom-dns.conf
+      mode: 0644
+      contents:
+        inline: |
+          [main]
+          dns=none
+    - path: /etc/resolv.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          search cluster.example.com prod.example.com
+          nameserver 192.168.1.53
+          nameserver 192.168.1.54
+          options ndots:5
 ```
 
-- path: /etc/resolv.conf
-  mode: 0644
-overwrite: true
-contents:
-inline: |
-search cluster.example.com prod.example.com
-nameserver 192.168.1.53
-nameserver 192.168.1.54
-options ndots:5
-
-## Limitations
+**Limitations**
 - ❌ Static file, not declarative
 - ❌ No drift detection
 - ❌ Harder to update (need to recreate nodes)
 - ❌ NetworkManager might overwrite on reboot
 
-Better approach: Use kubernetes-nmstate operator post-install (below)
+Better approach: use `kubernetes-nmstate` operator post-install.
 
 ---
 UPI Post-Install: Declarative DNS Management
 
-# After cluster is running, use NMState operator for DNS management
+After cluster is running, use NMState operator for DNS management.
 
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: production-dns
+  name: production-dns
 spec:
-nodeSelector:
-node-role.kubernetes.io/worker: ""
-desiredState:
-dns-resolver:
-config:
-search:
-- cluster.example.com
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - cluster.example.com
+          - prod.example.com
+        server:
+          - 192.168.1.53
+          - 192.168.1.54
 ```
 
-- prod.example.com
-  server:
-- 192.168.1.53
-- 192.168.1.54
+Different DNS policy for masters (optional):
 
----
-# Different DNS for masters (optional)
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: master-dns
+  name: master-dns
 spec:
-nodeSelector:
-node-role.kubernetes.io/master: ""
-desiredState:
-dns-resolver:
-config:
-search:
-- cluster.example.com
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - cluster.example.com
+          - prod.example.com
+        server:
+          - 192.168.1.53
+          - 192.168.1.54
 ```
 
-- prod.example.com
-  server:
-- 192.168.1.53  # Same DNS, but policy is explicit
-- 192.168.1.54
-
-## Advantages
+**Advantages**
 - ✅ Declarative (GitOps friendly)
 - ✅ Automatic drift correction
 - ✅ Easy updates (edit policy, operator applies)
@@ -600,468 +596,333 @@ search:
 - ✅ Validation before application
 
 ---
+```
 DNS Troubleshooting
 
-### Check Node DNS Configuration
+**Check Node DNS Configuration**
 
-# Via oc debug
+Via `oc debug`:
 ```bash
 oc debug node/worker-0
 chroot /host
 ```
 
-# Check current DNS config
+Check current DNS config:
 ```bash
 cat /etc/resolv.conf
 ```
 
-# Test DNS resolution
+Test DNS resolution:
+```bash
 nslookup api.cluster.example.com
 dig api.cluster.example.com
 host api-int.cluster.example.com
+```
 
-# Check which DNS server responded
+Check which DNS server responded:
+```bash
 dig api.cluster.example.com +trace
+```
 
-# Check NetworkManager DNS config
+Check NetworkManager DNS config:
+```bash
 nmcli dev show ens1f0 | grep DNS
+```
 
-# Check systemd-resolved (if used)
+Check `systemd-resolved` (if used):
+```bash
 resolvectl status
+```
 
 ---
 Verify NMState DNS Policy Applied
 
-# Check policy status
+Check policy status:
 ```bash
 oc get nncp production-dns
-NAME             STATUS
-production-dns   Available
+# NAME             STATUS
+# production-dns   Available
 ```
 
-# Check per-node status (enactments)
+Check per-node status (enactments):
 ```bash
 oc get nnce
-NODE       POLICY           STATUS
-worker-0   production-dns   Available
-worker-1   production-dns   Available
-worker-2   production-dns   Available
+# NODE       POLICY           STATUS
+# worker-0   production-dns   Available
+# worker-1   production-dns   Available
+# worker-2   production-dns   Available
 ```
 
-# Get detailed status
+Get detailed status:
 ```bash
 oc get nnce worker-0-production-dns -o yaml
-Shows current state vs desired state
+# Shows current state vs desired state
 ```
 
 ---
 Common DNS Issues
 
-Issue 1: Node Can't Resolve api.cluster.example.com
+Issue 1: Node cannot resolve `api.cluster.example.com`
 
-# Symptom
+Symptom:
 ```bash
 oc debug node/worker-0
 chroot /host
 nslookup api.cluster.example.com
-** server can't find api.cluster.example.com: NXDOMAIN
+# ** server can't find api.cluster.example.com: NXDOMAIN
 ```
 
-# Diagnosis
+Diagnosis:
 ```bash
 cat /etc/resolv.conf
-nameserver 192.168.1.53
-```
-
+# nameserver 192.168.1.53
 dig @192.168.1.53 api.cluster.example.com
 # Check if DNS server has the record
+```
 
-# Fix: Ensure DNS server has cluster records
-# OR update NMState policy with correct DNS server
+Fix:
+- Ensure DNS server has required cluster records.
+- Or update NMState policy with the correct DNS server.
 
 ---
-Issue 2: DNS Policy Not Applied
+Issue 2: DNS policy not applied
 
-# Check enactment status
+Check enactment status:
 ```bash
 oc get nnce -o wide
-STATUS: NodeNetworkConfigurationPolicyFailing
+# STATUS: NodeNetworkConfigurationPolicyFailing
 ```
 
-# Get details
+Get details:
 ```bash
 oc describe nnce worker-0-production-dns
-Error: DNS server not reachable
+# Error: DNS server not reachable
 ```
 
-# Fix: Ensure DNS server IPs are reachable from nodes
+Fix:
+```bash
 ping 192.168.1.53
-
----
-Issue 3: DNS Search Domain Too Long
-
-# Symptom: DNS queries slow
-# Cause: Too many search domains
-
-```
-dns-resolver:
-config:
-search:
-- cluster.example.com
-```
-
-- team-a.example.com
-- team-b.example.com
-- shared.example.com
-- prod.example.com
-- corp.example.com  # Too many!
-
-## Impact
-- Short name "database" tries:
-```
-  a. database.cluster.example.com
-  b. database.team-a.example.com
-  c. database.team-b.example.com
-  d. ... (6 queries before giving up)
-```
-
-Fix: Limit search domains to 3-4 most relevant
-
-```
-dns-resolver:
-config:
-  search:
-    - cluster.example.com
-    - prod.example.com
-  server:
-    - 192.168.1.53
 ```
 
 ---
-### Real-World DNS Scenarios
+Issue 3: DNS search domain list too long
 
+Symptom: DNS queries are slow.  
+Cause: too many search domains.
 
-**Scenario 1: IPI AWS with Corporate DNS Integration**
+Example (too many domains):
+```yaml
+dns-resolver:
+  config:
+    search:
+      - cluster.example.com
+      - team-a.example.com
+      - team-b.example.com
+      - shared.example.com
+      - prod.example.com
+      - corp.example.com
+```
 
-# Corporate requirement: All nodes must use corporate DNS
-# Corporate DNS has conditional forwarders for AWS
+Impact:
+- Short name `database` may try multiple domains before failing.
+
+Fix (keep 3-4 relevant domains):
+```yaml
+dns-resolver:
+  config:
+    search:
+      - cluster.example.com
+      - prod.example.com
+    server:
+      - 192.168.1.53
+```
+
+---
+**Real-World DNS Scenarios**
+
+**Scenario 1: IPI AWS with corporate DNS integration**
 
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: corporate-dns-integration
+  name: corporate-dns-integration
 spec:
-nodeSelector:
-node-role.kubernetes.io/worker: ""
-desiredState:
-dns-resolver:
-config:
-search:
-- corp.example.com
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - corp.example.com
+          - us-east-1.compute.internal
+        server:
+          - 10.100.50.53
+          - 10.100.51.53
+          - 10.0.0.2
 ```
 
-- us-east-1.compute.internal  # Still need AWS internal
-  server:
-- 10.100.50.53  # Corporate DNS (via VPN/Direct Connect)
-- 10.100.51.53  # Corporate DNS secondary
-- 10.0.0.2      # AWS VPC DNS (fallback)
-
-## Corporate DNS configuration (BIND example)
-# /etc/named.conf on corporate DNS
+Corporate DNS BIND forwarders example:
+```conf
 zone "compute.internal" {
-type forward;
-forward only;
-forwarders { 10.0.0.2; };  # Forward AWS queries to VPC DNS
+  type forward;
+  forward only;
+  forwarders { 10.0.0.2; };
 };
 
 zone "amazonaws.com" {
-type forward;
-forward only;
-forwarders { 10.0.0.2; };
+  type forward;
+  forward only;
+  forwarders { 10.0.0.2; };
 };
-
-zone "corp.example.com" {
-type master;
-file "/var/named/corp.example.com.zone";  # Local corporate zone
-};
+```
 
 ---
-Scenario 2: UPI Bare Metal with Split-Horizon DNS
+**Scenario 2: UPI bare metal with split-horizon DNS**
 
-# External clients: api.cluster.example.com → Public IP
-# Internal nodes: api.cluster.example.com → Private IP
+Internal and external clients resolve the same names to different IPs.
 
-# Nodes use internal DNS view
-hosts:
-- hostname: worker-0
-  networkConfig:
-```
+```yaml
 dns-resolver:
-config:
-search:
-- cluster.example.com
-  server:
-- 192.168.1.53  # Internal DNS with private view
+  config:
+    search:
+      - cluster.example.com
+    server:
+      - 192.168.1.53
 ```
 
-## Internal DNS (BIND views)
-# Internal view (what nodes see)
-view "internal" {
-match-clients { 192.168.1.0/24; };  # Node network
-
-zone "cluster.example.com" {
-type master;
-file "/var/named/internal/cluster.example.com.zone";
-};
-};  
-
-# /var/named/internal/cluster.example.com.zone
-api.cluster.example.com.     A    192.168.1.100  # Private LB IP
-*.apps.cluster.example.com.  A    192.168.1.200  # Private ingress IP
-
-# External view (what internet sees)
-view "external" {
-match-clients { any; };
-
-zone "cluster.example.com" {
-type master;
-file "/var/named/external/cluster.example.com.zone";
-};  
-};
-
-# /var/named/external/cluster.example.com.zone
-api.cluster.example.com.     A    203.0.113.100  # Public LB IP
-*.apps.cluster.example.com.  A    203.0.113.200  # Public ingress IP
-
 ---
-Scenario 3: Edge Deployment with Unreliable DNS
-
-# Edge location with intermittent DNS connectivity
-# Cache DNS responses aggressively
+**Scenario 3: Edge deployment with unreliable DNS**
 
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: edge-dns-caching
+  name: edge-dns-caching
 spec:
-nodeSelector:
-location: edge
-desiredState:
-dns-resolver:
-config:
-search:
-- edge.cluster.example.com
-  server:
-- 127.0.0.1      # Local caching DNS (dnsmasq/bind)
+  nodeSelector:
+    location: edge
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - edge.cluster.example.com
+        server:
+          - 127.0.0.1
+          - 10.0.100.53
 ```
-
-- 10.0.100.53    # Upstream DNS (when available)
-  options:
-- timeout:5      # Fail fast if DNS unreachable
-- attempts:2
-
-## Deploy local DNS cache (dnsmasq)
-```yaml
-apiVersion: v1
-kind: DaemonSet
-metadata:
-name: node-dns-cache
-namespace: kube-system
-spec:
-selector:
-matchLabels:
-app: node-dns-cache
-template:
-metadata:
-labels:
-app: node-dns-cache
-spec:
-hostNetwork: true
-containers:
-- name: dnsmasq
-  image: quay.io/openshift/origin-dnsmasq:latest
-args:
-- --no-daemon
-```
-
-- --server=10.0.100.53
-- --cache-size=10000
-- --neg-ttl=3600  # Cache negative responses
-- --local-ttl=300
 
 ---
-Scenario 4: Multi-Cluster with Cluster-Specific DNS
+**Scenario 4: Multi-cluster with cluster-specific DNS**
 
-# Multiple clusters in same datacenter
-# Each cluster has its own DNS zone
-
-# Cluster A nodes
+Cluster A:
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: cluster-a-dns
+  name: cluster-a-dns
 spec:
-nodeSelector:
-cluster: cluster-a
-desiredState:
-dns-resolver:
-config:
-search:
-- cluster-a.example.com  # This cluster's zone
+  nodeSelector:
+    cluster: cluster-a
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - cluster-a.example.com
+          - shared.example.com
+        server:
+          - 192.168.1.53
 ```
 
-- shared.example.com     # Shared services zone
-  server:
-- 192.168.1.53
-
----
-# Cluster B nodes
+Cluster B:
 ```yaml
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-name: cluster-b-dns
+  name: cluster-b-dns
 spec:
-nodeSelector:
-cluster: cluster-b
-desiredState:
-dns-resolver:
-config:
-search:
-- cluster-b.example.com  # Different cluster zone
+  nodeSelector:
+    cluster: cluster-b
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+          - cluster-b.example.com
+          - shared.example.com
+        server:
+          - 192.168.1.53
 ```
-
-- shared.example.com     # Same shared services
-  server:
-- 192.168.1.53
 
 ---
 DNS vs CoreDNS (Cluster DNS)
 
-Critical Distinction
+Critical distinction:
 
-┌─────────────────────────────────────────────────────────────┐
-│  Node-Level DNS (NMState manages)                            │
-├─────────────────────────────────────────────────────────────┤
-│  /etc/resolv.conf                                            │
-│  nameserver 192.168.1.53                                     │
-│                                                              │
-│  Used by:                                                    │
-│  - kubelet (when connecting to API server)                  │
-│  - CRI-O (when pulling container images)                    │
-│  - Node-level systemd services                              │
-│  - SSH sessions on the node                                 │
-│                                                              │
-│  Resolves:                                                   │
-│  - api.cluster.example.com                                   │
-│  - registry.example.com                                      │
-│  - External service names                                    │
-└─────────────────────────────────────────────────────────────┘
+```text
+Node-level DNS (NMState manages):
+- Uses node /etc/resolv.conf
+- Used by kubelet, CRI-O, and node services
+- Resolves API endpoints, registries, and external names
 
-┌─────────────────────────────────────────────────────────────┐
-│  Pod-Level DNS (CoreDNS, NMState does NOT manage)           │
-├─────────────────────────────────────────────────────────────┤
-│  Pod /etc/resolv.conf                                        │
-│  nameserver 172.30.0.10  (ClusterIP of dns-default service) │
-│  search default.svc.cluster.local svc.cluster.local         │
-│                                                              │
-│  Used by:                                                    │
-│  - Application pods                                          │
-│  - Containers running in the cluster                         │
-│                                                              │
-│  Resolves:                                                   │
-│  - service-name.namespace.svc.cluster.local                  │
-│  - kubernetes.default.svc.cluster.local                      │
-│  - External names (forwarded to upstream DNS)                │
-│                                                              │
-│  Managed by:                                                 │
-│  - cluster-dns-operator                                      │
-│  - CoreDNS ConfigMap in openshift-dns namespace             │
-└─────────────────────────────────────────────────────────────┘
+Pod-level DNS (CoreDNS manages):
+- Uses pod /etc/resolv.conf (dns-default service)
+- Used by application pods
+- Resolves service-name.namespace.svc.cluster.local and forwarded external names
+```
 
 ---
 Example: DNS Flow for Different Queries
 
-# 1. Pod queries Kubernetes Service
+1. Pod queries Kubernetes service:
 ```bash
 kubectl exec -it mypod -- nslookup kubernetes.default
 ```
+Flow: Pod -> CoreDNS -> answer from cluster zone.
 
-# Flow:
-# Pod → CoreDNS (172.30.0.10)
-# CoreDNS → responds from cluster.local zone
-# (NMState/node DNS not involved)
-
-# 2. Pod queries external name
+2. Pod queries external name:
 ```bash
 kubectl exec -it mypod -- nslookup google.com
 ```
+Flow: Pod -> CoreDNS -> upstream node DNS -> external resolution.
 
-# Flow:
-# Pod → CoreDNS (172.30.0.10)
-# CoreDNS → forwards to upstream (node DNS from /etc/resolv.conf)
-# Node DNS (192.168.1.53) → resolves externally
-# (CoreDNS uses node DNS as upstream)
-
-# 3. Node process (kubelet) queries API
-# On the node:
+3. Node process queries API:
+```bash
 nslookup api.cluster.example.com
-
-# Flow:
-# kubelet → Node DNS (/etc/resolv.conf, configured by NMState)
-# Node DNS (192.168.1.53) → responds
-# (CoreDNS not involved)
+```
+Flow: Node process -> node DNS from `/etc/resolv.conf`.
 
 ---
 Summary: DNS in IPI vs UPI
 
-┌──────────────────────────────┬──────────────────────────────────────────────────┬───────────────────────────────────────────────┬───────────────────────────────┐
-│            Aspect            │                       IPI                        │                UPI Bare Metal                 │           UPI Cloud           │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Node DNS source              │ Cloud DHCP (automatic)                           │ Manual config (NMState)                       │ Cloud DHCP or manual          │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ DNS servers                  │ Cloud-provided (VPC DNS)                         │ Your DNS servers                              │ Cloud or your DNS             │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Cluster DNS records          │ Created by installer (Route 53, Azure DNS, etc.) │ YOU create before install                     │ YOU create before install     │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ NMState role for DNS         │ Override cloud DNS (optional)                    │ Configure node DNS (essential)                │ Override cloud DNS (optional) │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Installation-time DNS config │ N/A (cloud-init)                                 │ agent-config.yaml (NMState)                   │ N/A (cloud-init) or manual    │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Post-install DNS management  │ NMState operator (optional)                      │ NMState operator (recommended)                │ NMState operator (optional)   │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Common use cases             │ Corporate DNS override, split-horizon            │ All node DNS config, air-gapped, custom zones │ Similar to IPI                │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ DNS HA                       │ Cloud provider HA                                │ Your DNS HA design                            │ Cloud or your HA              │
-├──────────────────────────────┼──────────────────────────────────────────────────┼───────────────────────────────────────────────┼───────────────────────────────┤
-│ Cluster DNS (CoreDNS)        │ Same (automatic)                                 │ Same (automatic)                              │ Same (automatic)              │
-└──────────────────────────────┴──────────────────────────────────────────────────┴───────────────────────────────────────────────┴───────────────────────────────┘
+```text
+Aspect                     | IPI                             | UPI Bare Metal                    | UPI Cloud
+---------------------------|----------------------------------|-----------------------------------|-------------------------
+Node DNS source            | Cloud DHCP (automatic)          | Manual config (NMState)           | Cloud DHCP or manual
+DNS servers                | Cloud-provided                  | Your DNS servers                  | Cloud or your DNS
+Cluster DNS records        | Installer-created               | You create before install         | You create before install
+NMState role for DNS       | Optional override               | Essential for node DNS            | Optional override
+Installation-time config   | cloud-init                      | agent-config.yaml (NMState)       | cloud-init or manual
+Post-install management    | NMState operator (optional)     | NMState operator (recommended)    | NMState operator (optional)
+Cluster DNS (CoreDNS)      | Same                            | Same                              | Same
+```
 
 ---
 Key Takeaways
 
-Node DNS (NMState)
+Node DNS (NMState):
+- IPI: Cloud provides DNS automatically; NMState is usually for overrides.
+- UPI: NMState is critical for configuring node resolvers.
+- Scope: node-level processes only (`kubelet`, `CRI-O`, system services).
 
-- IPI: Cloud provides DNS automatically, NMState optional for overrides
-- UPI: NMState critical for configuring node DNS resolvers
-- Scope: Node-level processes only (kubelet, CRI-O, systemd)
+Cluster DNS (CoreDNS):
+- Both IPI and UPI: managed by `cluster-dns-operator`.
+- NMState does not manage cluster/pod DNS.
 
-Cluster DNS (CoreDNS)
-
-- Both IPI and UPI: Managed by cluster-dns-operator
-- NMState: Does NOT manage cluster/pod DNS
-- Scope: Pod DNS resolution only
-
-Best Practices
-
-1. UPI: Always configure DNS via NMState (agent-config.yaml or operator)
-2. IPI: Use NMState for DNS only when overriding cloud DNS is required
-3. Search domains: Keep to 3-4 relevant domains (avoid performance issues)
-4. Dual-stack: Include both IPv4 and IPv6 DNS servers
-5. HA: Always configure multiple DNS servers (minimum 2)
-6. Air-gapped: Ensure internal DNS has ALL cluster records before install
-7. Testing: Verify DNS resolution from nodes before deploying workloads
-```
+Best practices:
+1. UPI: configure DNS via NMState (`agent-config.yaml` or operator policy).
+2. IPI: use NMState only when cloud DNS override is required.
+3. Keep search domains small (3-4 preferred).
+4. Include IPv4 and IPv6 DNS servers for dual-stack clusters.
+5. Configure at least two DNS servers for HA.
+6. In air-gapped environments, pre-create all required internal DNS records.
+7. Validate DNS from nodes before workload rollout.
